@@ -1,0 +1,12 @@
+# Ignore venv and databases everywhere
+**/venv/
+**/*.db
+**/*.sqlite3
+**/__pycache__/
+**/.pytest_cache/
+**/uploads/audio/*
+!**/uploads/audio/.gitkeep
+**/uploads/transcriptions/*
+!**/uploads/transcriptions/.gitkeep
+.vscode/
+.idea/

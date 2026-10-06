@@ -14,9 +14,9 @@ Regional languages and local dialects form the bedrock of cultural identity, car
 ## 👥 Project Team & Academic Details
 * **Course:** B.Sc. Computer Science (Sem V) - Community Engagement Project[cite: 1]
 * **Academic Year:** 2026–27 (Total 45 Hours)[cite: 1]
-* **Student Name(s):** [Your Name / Group Names][cite: 1]
-* **Roll Number(s):** [Enter Roll Numbers][cite: 1]
-* **College Name:** [Enter College Name][cite: 1]
+* **Student Name(s):** TinLog.exe[cite: 1]
+* **Roll Number(s):** 35,49,59[cite: 1]
+* **College Name:** MGM COLLEGE OF COMPUTER SCIENCE AND INFORMAATION TECHNOLOGY[cite: 1]
 
 ---
 

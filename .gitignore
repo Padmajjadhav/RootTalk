@@ -1,0 +1,38 @@
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environment
+venv/
+ENV/
+env/
+.venv/
+
+# SQLite Database
+*.db
+*.sqlite3
+
+# Uploaded Media (keep folder structure)
+uploads/audio/*
+!uploads/audio/.gitkeep
+uploads/transcriptions/*
+!uploads/transcriptions/.gitkeep
+
+# Pytest / Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment secrets
+.env
+*.local
+
+# IDEs & Editors
+.vscode/
+.idea/
+*.swp
+*.swo

@@ -1,0 +1,17 @@
+services:
+  # 1. FastAPI Backend Web Service
+  - type: web
+    name: roottalk-backend
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python run_server.py --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+
+  # 2. BhashaLok Frontend Static Site
+  - type: static
+    name: roottalk-frontend
+    rootDir: frontend
+    publishDir: .

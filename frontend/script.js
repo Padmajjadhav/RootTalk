@@ -7,7 +7,6 @@ let currentSection = "home";
 let currentCategory = "All";
 let lexiconData = [];
 let audioVoices = [];
-let contributorsData = [];
 let activeAudio = null;
 let authToken = localStorage.getItem("bhashalok_token") || null;
 
@@ -71,7 +70,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   await fetchBackendStats();
   await fetchLexiconEntries();
   await fetchAudioRecordings();
-  await fetchContributorsLeaderboard();
+  renderContributors();
 });
 
 // --- BACKEND API DATA FETCHERS ---
@@ -148,19 +147,6 @@ async function fetchAudioRecordings() {
     ];
   }
   renderAudioRecordings(audioVoices);
-}
-
-// 4. Fetch Contributor Leaderboard
-async function fetchContributorsLeaderboard() {
-  try {
-    const res = await fetch(`${API_BASE}/contributions/leaderboard`);
-    if (res.ok) {
-      contributorsData = await res.json();
-    }
-  } catch (err) {
-    contributorsData = [];
-  }
-  renderContributors();
 }
 
 // --- NAVIGATION SWITCHER ---
@@ -249,7 +235,6 @@ async function filterLexiconEntries() {
   const query = document.getElementById("dict-search-input").value.toLowerCase().trim();
   const posFilter = document.getElementById("pos-filter").value;
 
-  // Real-time backend search or client filter fallback
   const filtered = lexiconData.filter(item => {
     const categoryName = item.semantic_category || item.category || "";
     const matchQuery = !query || 
@@ -407,29 +392,24 @@ function filterAudioGenre(genre) {
   }
 }
 
-// --- CONTRIBUTORS RENDER ---
+// --- CONTRIBUTORS RENDER (TEAM MEMBERS WITH PHOTOS) ---
 function renderContributors() {
   const grid = document.getElementById("contributors-grid");
   if (!grid) return;
 
-  const defaultContributors = [
-    { full_name: "Ganpat Kaka", badge_title: "Native Speaker", reputation_points: 500, avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=200&auto=format&fit=crop" },
-    { full_name: "Sushila Tai", badge_title: "Dialect Champion", reputation_points: 350, avatar: "https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop" },
-    { full_name: "Dr. Rajesh Patil", badge_title: "Senior Linguist", reputation_points: 1000, avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop" },
-    { full_name: "Lata Bai", badge_title: "Cultural Explorer", reputation_points: 220, avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=200&auto=format&fit=crop" }
+  const teamContributors = [
+    { name: "Parth Kadam", img: "assets/parth_kadam.jpg" },
+    { name: "Aaditya Jadhav", img: "assets/aaditya_jadhav.jpg" },
+    { name: "Padmaj Jadhav", img: "assets/padmaj_jadhav.jpg" }
   ];
 
-  const listToRender = contributorsData.length > 0 ? contributorsData : defaultContributors;
-
   grid.innerHTML = "";
-  listToRender.forEach(c => {
+  teamContributors.forEach(c => {
     const card = document.createElement("div");
-    card.className = "bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-center";
+    card.className = "bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-center flex flex-col items-center justify-center";
     card.innerHTML = `
-      <img src="${c.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop'}" class="w-20 h-20 rounded-full object-cover mx-auto mb-3 shadow-md border-2 border-emerald-100" />
-      <h3 class="font-bold text-slate-900 text-base">${c.full_name || c.username}</h3>
-      <div class="text-xs font-semibold text-emerald-800 mb-1">${c.badge_title || 'Contributor'}</div>
-      <div class="text-xs font-medium bg-slate-50 py-1.5 px-3 rounded-lg text-slate-700 mt-2">${c.reputation_points || 10} Reputation Points</div>
+      <img src="${c.img}" alt="${c.name}" class="w-32 h-32 rounded-full object-cover mb-4 shadow-md border-2 border-emerald-100" />
+      <h3 class="font-extrabold text-slate-900 text-lg">${c.name}</h3>
     `;
     grid.appendChild(card);
   });

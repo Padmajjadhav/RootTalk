@@ -1,6 +1,6 @@
-# 🎙️ RootTalk — Digital Preservation of Regional Languages & Dialects
+# 🎙️ BhashaLok — Digital Preservation of Regional Languages & Dialects
 
-RootTalk is a digital preservation platform designed to collect, transcribe, archive, and preserve endangered regional languages, dialects, oral folklore, and phonetic heritage.
+**BhashaLok** is a digital preservation platform designed to collect, transcribe, archive, and preserve endangered regional languages, dialects, oral folklore, and phonetic heritage.
 
 ---
 
@@ -19,7 +19,9 @@ RootTalk is a digital preservation platform designed to collect, transcribe, arc
 ```
 RootTalk/
 ├── backend/            # FastAPI Backend API Server (REST, WebSockets, DB, Audio Streaming)
-└── README.md           # Main Repository Documentation
+├── frontend/           # BhashaLok HTML5, CSS3, & Vanilla JS Web Interface
+└── docs/               # BhashaLok Frontend Blueprint design references
 ```
 
-For detailed backend API usage, setup instructions, and endpoint documentation, please refer to the **[Backend README](./backend/README.md)**.
+- **[Backend README](./backend/README.md)**: Server setup, REST endpoints, WebSockets & test instructions.
+- **[Frontend README](./frontend/README.md)**: Web application structure and user interface overview.

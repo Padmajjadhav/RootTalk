@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BhashaLok – Digital Heritage & Regional Language Archive</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="styles/style.css" />
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- ==================== HEADER & NAVIGATION ==================== -->
+  <header class="navbar sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Brand Logo -->
+      <a href="#" onclick="showSection('home')" class="flex items-center gap-3 text-emerald-900 font-bold text-xl tracking-tight">
+        <div class="w-10 h-10 rounded-lg bg-emerald-800 text-white flex items-center justify-center text-xl shadow-md">
+          <i class="fa-solid fa-tree"></i>
+        </div>
+        <div>
+          <span class="text-emerald-900 font-extrabold text-2xl">BhashaLok</span>
+          <span class="block text-xs font-medium text-emerald-700 -mt-1">Digital Regional Language Archive</span>
+        </div>
+      </a>
+
+      <!-- Desktop Navigation Links -->
+      <nav class="hidden md:flex items-center gap-8 text-sm">
+        <button onclick="showSection('home')" id="nav-home" class="nav-link active py-5">Home</button>
+        <button onclick="showSection('explore')" id="nav-explore" class="nav-link py-5">Explore</button>
+        <button onclick="showSection('voices')" id="nav-voices" class="nav-link py-5">Voices</button>
+        <button onclick="showSection('contributors')" id="nav-contributors" class="nav-link py-5">Contributors</button>
+        <button onclick="showSection('contribute')" id="nav-contribute" class="nav-link py-5">Contribute</button>
+        <button onclick="showSection('about')" id="nav-about" class="nav-link py-5">About</button>
+        <button onclick="showSection('admin')" id="nav-admin" class="nav-link py-5 text-emerald-700 font-semibold"><i class="fa-solid fa-user-shield mr-1"></i> Admin</button>
+      </nav>
+
+      <!-- Quick Search & Mobile Menu Trigger -->
+      <div class="flex items-center gap-3">
+        <button onclick="focusGlobalSearch()" class="p-2 text-slate-500 hover:text-emerald-800 rounded-full hover:bg-slate-100 transition">
+          <i class="fa-solid fa-magnifying-glass text-lg"></i>
+        </button>
+        
+        <!-- Mobile Menu Toggle Button -->
+        <button onclick="toggleMobileMenu()" class="md:hidden p-2 text-slate-700 hover:text-emerald-900">
+          <i class="fa-solid fa-bars text-xl"></i>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Mobile Drawer Menu -->
+    <div id="mobile-menu" class="hidden md:hidden bg-white border-b border-slate-200 px-4 pt-2 pb-4 space-y-2">
+      <button onclick="showSection('home'); toggleMobileMenu()" class="block w-full text-left py-2 font-medium text-slate-700 hover:text-emerald-800">Home</button>
+      <button onclick="showSection('explore'); toggleMobileMenu()" class="block w-full text-left py-2 font-medium text-slate-700 hover:text-emerald-800">Explore Dictionary</button>
+      <button onclick="showSection('voices'); toggleMobileMenu()" class="block w-full text-left py-2 font-medium text-slate-700 hover:text-emerald-800">Community Voices</button>
+      <button onclick="showSection('contributors'); toggleMobileMenu()" class="block w-full text-left py-2 font-medium text-slate-700 hover:text-emerald-800">Contributors</button>
+      <button onclick="showSection('contribute'); toggleMobileMenu()" class="block w-full text-left py-2 font-medium text-slate-700 hover:text-emerald-800">Contribute a Word</button>
+      <button onclick="showSection('about'); toggleMobileMenu()" class="block w-full text-left py-2 font-medium text-slate-700 hover:text-emerald-800">About Project</button>
+      <button onclick="showSection('admin'); toggleMobileMenu()" class="block w-full text-left py-2 font-semibold text-emerald-800">Admin Portal</button>
+    </div>
+  </header>
+
+
+  <!-- ==================== MAIN CONTENT SECTIONS ==================== -->
+  <main class="flex-grow">
+
+    <!-- ---------------- SECTION 1: HOME PAGE ---------------- -->
+    <section id="sec-home" class="block">
+      
+      <!-- Hero Banner -->
+      <div class="hero-section py-16 md:py-24 px-4 sm:px-6 lg:px-8 text-center">
+        <div class="max-w-3xl mx-auto">
+          <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight mb-4 leading-tight">
+            Every word carries a story.
+          </h1>
+          <p class="text-lg md:text-xl text-emerald-50 mb-8 max-w-2xl mx-auto font-light">
+            Discover, listen to and preserve the regional languages and dialects of our communities.
+          </p>
+
+          <!-- Search Input Bar -->
+          <div class="relative max-w-2xl mx-auto shadow-2xl rounded-full overflow-hidden flex bg-white p-1">
+            <input type="text" id="hero-search-input" onkeyup="handleHeroSearch(event)"
+              placeholder="Search words, phrases or meanings..." 
+              class="w-full px-6 py-3 text-slate-800 placeholder-slate-400 focus:outline-none text-base" />
+            <button onclick="triggerHeroSearch()" class="bg-emerald-800 hover:bg-emerald-900 text-white px-8 py-3 rounded-full font-medium transition flex items-center gap-2">
+              <i class="fa-solid fa-magnifying-glass"></i> <span class="hidden sm:inline">Search</span>
+            </button>
+          </div>
+
+          <!-- Quick Filter Tags -->
+          <div class="flex flex-wrap justify-center gap-2 mt-6 text-sm">
+            <span class="text-emerald-100 font-medium mr-2 flex items-center">Try:</span>
+            <button onclick="quickFilterTag('Agriculture')" class="bg-white/20 hover:bg-white/30 text-white px-3.5 py-1 rounded-full backdrop-blur-sm transition">Agriculture</button>
+            <button onclick="quickFilterTag('Festival')" class="bg-white/20 hover:bg-white/30 text-white px-3.5 py-1 rounded-full backdrop-blur-sm transition">Festival</button>
+            <button onclick="quickFilterTag('Family')" class="bg-white/20 hover:bg-white/30 text-white px-3.5 py-1 rounded-full backdrop-blur-sm transition">Family</button>
+            <button onclick="quickFilterTag('Nature')" class="bg-white/20 hover:bg-white/30 text-white px-3.5 py-1 rounded-full backdrop-blur-sm transition">Nature</button>
+            <button onclick="quickFilterTag('Food')" class="bg-white/20 hover:bg-white/30 text-white px-3.5 py-1 rounded-full backdrop-blur-sm transition">Food</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Statistics Counter Bar -->
+      <div class="bg-white border-b border-slate-200 py-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+          <div class="p-4 border-r border-slate-100 last:border-0">
+            <div id="stat-words" class="text-3xl font-extrabold text-emerald-900">1,240</div>
+            <div class="text-sm font-medium text-slate-500 mt-1">Preserved Words</div>
+          </div>
+          <div class="p-4 border-r border-slate-100 last:border-0">
+            <div id="stat-audio" class="text-3xl font-extrabold text-emerald-900">380</div>
+            <div class="text-sm font-medium text-slate-500 mt-1">Audio Recordings</div>
+          </div>
+          <div class="p-4 border-r border-slate-100 last:border-0">
+            <div id="stat-contributors" class="text-3xl font-extrabold text-emerald-900">12</div>
+            <div class="text-sm font-medium text-slate-500 mt-1">Active Contributors</div>
+          </div>
+          <div class="p-4">
+            <div id="stat-dialects" class="text-3xl font-extrabold text-emerald-900">4</div>
+            <div class="text-sm font-medium text-slate-500 mt-1">Regional Dialects</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Today's Featured Word Showcase Card -->
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-2">Featured Entry</div>
+        <h2 class="text-2xl font-bold text-slate-900 mb-6">Today's Word</h2>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-sm grid md:grid-cols-12 gap-8 items-center">
+          <div class="md:col-span-7">
+            <span class="inline-block bg-emerald-100 text-emerald-800 text-xs font-semibold px-2.5 py-1 rounded-md mb-3">Malvani Dialect</span>
+            <h3 class="text-4xl font-extrabold text-slate-900 mb-1">मायाळू</h3>
+            <div class="text-lg font-mono text-emerald-700 mb-4">/ma:ja:lu/</div>
+            
+            <div class="space-y-3 mb-6">
+              <div>
+                <span class="text-xs font-semibold uppercase text-slate-400 block">Meaning</span>
+                <span class="text-base text-slate-700 font-medium">Kind / Affectionate / Loving Nature</span>
+              </div>
+              <div>
+                <span class="text-xs font-semibold uppercase text-slate-400 block">Standard Marathi Equivalent</span>
+                <span class="text-base text-slate-700 font-medium">प्रेमळ / आपुलकी असणारा</span>
+              </div>
+              <div>
+                <span class="text-xs font-semibold uppercase text-slate-400 block">Context Sentence</span>
+                <span class="text-sm italic text-slate-600">"तो मायाळू माणूस सगळ्यांची काळजी घेतो."</span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+              <button onclick="playSampleAudio('https://actions.google.com/sounds/v1/human/speech_male_cheerful.ogg')" 
+                class="btn-primary px-6 py-2.5 rounded-full font-medium flex items-center gap-2 shadow-sm">
+                <i class="fa-solid fa-volume-high"></i> Listen Pronunciation
+              </button>
+              <button onclick="openWordDetailModal(1)" class="text-emerald-800 hover:text-emerald-900 font-semibold text-sm flex items-center gap-1">
+                View full entry <i class="fa-solid fa-arrow-right text-xs"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="md:col-span-5">
+            <img src="https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=800&auto=format&fit=crop" 
+              alt="Native Speaker Malvan" class="rounded-xl object-cover h-64 w-full shadow-md" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Explore Language Categories Cards -->
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-12">
+        <h2 class="text-2xl font-bold text-slate-900 mb-6">Explore the Language</h2>
+        
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div onclick="showSection('explore')" class="bg-white p-6 rounded-2xl border border-slate-200 hover:border-emerald-500 hover:shadow-md cursor-pointer transition text-center group">
+            <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center text-xl mx-auto mb-4 group-hover:bg-emerald-800 group-hover:text-white transition">
+              <i class="fa-solid fa-book"></i>
+            </div>
+            <h4 class="font-bold text-slate-900 mb-1">Dictionary</h4>
+            <p class="text-xs text-slate-500">Words & meanings</p>
+          </div>
+
+          <div onclick="showSection('explore')" class="bg-white p-6 rounded-2xl border border-slate-200 hover:border-emerald-500 hover:shadow-md cursor-pointer transition text-center group">
+            <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center text-xl mx-auto mb-4 group-hover:bg-emerald-800 group-hover:text-white transition">
+              <i class="fa-solid fa-comments"></i>
+            </div>
+            <h4 class="font-bold text-slate-900 mb-1">Phrases</h4>
+            <p class="text-xs text-slate-500">Common expressions</p>
+          </div>
+
+          <div onclick="showSection('explore')" class="bg-white p-6 rounded-2xl border border-slate-200 hover:border-emerald-500 hover:shadow-md cursor-pointer transition text-center group">
+            <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center text-xl mx-auto mb-4 group-hover:bg-emerald-800 group-hover:text-white transition">
+              <i class="fa-solid fa-feather-pointed"></i>
+            </div>
+            <h4 class="font-bold text-slate-900 mb-1">Proverbs</h4>
+            <p class="text-xs text-slate-500">Traditional wisdom</p>
+          </div>
+
+          <div onclick="showSection('voices')" class="bg-white p-6 rounded-2xl border border-slate-200 hover:border-emerald-500 hover:shadow-md cursor-pointer transition text-center group">
+            <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center text-xl mx-auto mb-4 group-hover:bg-emerald-800 group-hover:text-white transition">
+              <i class="fa-solid fa-users text-lg"></i>
+            </div>
+            <h4 class="font-bold text-slate-900 mb-1">Community Voices</h4>
+            <p class="text-xs text-slate-500">Real people, real stories</p>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+
+    <!-- ---------------- SECTION 2: DICTIONARY / EXPLORE PAGE ---------------- -->
+    <section id="sec-explore" class="hidden py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      
+      <div class="mb-8">
+        <div class="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-1">Browse Archive</div>
+        <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Explore Dictionary</h1>
+        <p class="text-slate-600 text-sm">Search and explore regional words, phrases and expressions preserved across dialects.</p>
+      </div>
+
+      <!-- Controls & Filters Container -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 mb-8 shadow-sm">
+        
+        <!-- Live Instant Search Input -->
+        <div class="relative mb-6">
+          <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400"></i>
+          <input type="text" id="dict-search-input" oninput="filterLexiconEntries()"
+            placeholder="Search regional words, IPA phonetic or English meaning..." 
+            class="w-full pl-11 pr-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 text-slate-800 text-sm" />
+        </div>
+
+        <!-- Category Filter Pills -->
+        <div class="flex flex-wrap gap-2 mb-6">
+          <button onclick="selectCategory('All')" class="filter-tag active" id="cat-All">All (245)</button>
+          <button onclick="selectCategory('Agriculture')" class="filter-tag" id="cat-Agriculture">Agriculture (42)</button>
+          <button onclick="selectCategory('Nature')" class="filter-tag" id="cat-Nature">Nature (38)</button>
+          <button onclick="selectCategory('Food')" class="filter-tag" id="cat-Food">Food (31)</button>
+          <button onclick="selectCategory('Festival')" class="filter-tag" id="cat-Festival">Festival (28)</button>
+          <button onclick="selectCategory('Family')" class="filter-tag" id="cat-Family">Family (26)</button>
+          <button onclick="selectCategory('Culture')" class="filter-tag" id="cat-Culture">Culture (34)</button>
+          <button onclick="selectCategory('Daily Life')" class="filter-tag" id="cat-Daily-Life">Daily Life (27)</button>
+          <button onclick="selectCategory('Animals')" class="filter-tag" id="cat-Animals">Animals (19)</button>
+        </div>
+
+        <!-- Additional Sorting Dropdowns -->
+        <div class="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-100 text-xs font-medium text-slate-600">
+          <div class="flex items-center gap-4">
+            <div>
+              <label for="pos-filter" class="mr-2">Part of Speech:</label>
+              <select id="pos-filter" onchange="filterLexiconEntries()" class="border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none">
+                <option value="All">All Types</option>
+                <option value="Noun">Noun</option>
+                <option value="Verb">Verb</option>
+                <option value="Adjective">Adjective</option>
+                <option value="Phrase">Phrase / Idiom</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <span id="entries-counter" class="text-slate-500 font-semibold">Showing entries</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Dictionary Entries Grid -->
+      <div id="lexicon-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Dynamic Lexicon Cards loaded via JavaScript -->
+      </div>
+
+    </section>
+
+
+    <!-- ---------------- SECTION 3: COMMUNITY VOICES PAGE ---------------- -->
+    <section id="sec-voices" class="hidden py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      
+      <div class="mb-8">
+        <div class="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-1">Oral Histories & Music</div>
+        <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Community Voices</h1>
+        <p class="text-slate-600 text-sm">Real voices. Real stories. Real language recorded from native elders and regional community members.</p>
+      </div>
+
+      <!-- Audio Category Filter Pills -->
+      <div class="flex flex-wrap gap-2 mb-8">
+        <button onclick="filterAudioGenre('All')" class="filter-tag active" id="genre-All">All Voices</button>
+        <button onclick="filterAudioGenre('Agriculture')" class="filter-tag" id="genre-Agriculture">Agriculture</button>
+        <button onclick="filterAudioGenre('Culture')" class="filter-tag" id="genre-Culture">Culture</button>
+        <button onclick="filterAudioGenre('Festivals')" class="filter-tag" id="genre-Festivals">Festivals</button>
+        <button onclick="filterAudioGenre('Daily Life')" class="filter-tag" id="genre-Daily Life">Daily Life</button>
+      </div>
+
+      <!-- Audio Recordings List -->
+      <div id="audio-recordings-list" class="space-y-6">
+        <!-- Audio Recording Cards rendered dynamically -->
+      </div>
+
+    </section>
+
+
+    <!-- ---------------- SECTION 4: CONTRIBUTORS PAGE ---------------- -->
+    <section id="sec-contributors" class="hidden py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      
+      <div class="mb-8">
+        <div class="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-1">Preservation Champions</div>
+        <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Contributors</h1>
+        <p class="text-slate-600 text-sm">The native speakers, linguists, and community members helping preserve our linguistic heritage.</p>
+      </div>
+
+      <div id="contributors-grid" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Contributor Cards rendered dynamically -->
+      </div>
+
+    </section>
+
+
+    <!-- ---------------- SECTION 5: CONTRIBUTE FORM PAGE ---------------- -->
+    <section id="sec-contribute" class="hidden py-10 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto">
+      
+      <div class="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
+        <div class="mb-6 border-b border-slate-100 pb-4">
+          <h1 class="text-2xl font-bold text-slate-900">Contribute a Word</h1>
+          <p class="text-sm text-slate-600 mt-1">Help preserve a word or story from your community dialect repository.</p>
+        </div>
+
+        <form id="submission-form" onsubmit="handleWordSubmission(event)" class="space-y-5">
+          
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Word / Phrase *</label>
+            <input type="text" id="form-term" required placeholder="Enter word or phrase (e.g., ख़य चाललोस)"
+              class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 text-sm" />
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">English Meaning *</label>
+              <input type="text" id="form-meaning-en" required placeholder="Enter English meaning"
+                class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Standard Language Meaning *</label>
+              <input type="text" id="form-meaning-std" required placeholder="Standard Marathi / Hindi translation"
+                class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 text-sm" />
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Dialect *</label>
+              <select id="form-dialect" required class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 text-sm bg-white">
+                <option value="1">Malvani (Konkan Coast)</option>
+                <option value="2">Varhadi (Vidarbha)</option>
+                <option value="3">Ahirani (Khandesh)</option>
+                <option value="4">Awadhi (Eastern UP)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Part of Speech</label>
+              <select id="form-pos" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 text-sm bg-white">
+                <option value="Noun">Noun</option>
+                <option value="Verb">Verb</option>
+                <option value="Adjective">Adjective</option>
+                <option value="Phrase">Phrase / Expression</option>
+                <option value="Proverb">Proverb / Idiom</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Phonetic Pronunciation with Auto IPA Generator -->
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-xs font-bold uppercase tracking-wider text-slate-600">Phonetic Pronunciation (IPA)</label>
+              <button type="button" onclick="autoGenerateIPA()" class="text-xs text-emerald-800 hover:underline font-semibold">
+                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Auto-Generate IPA
+              </button>
+            </div>
+            <input type="text" id="form-ipa" placeholder="e.g. /kʰəj t͡saːlloːs/"
+              class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 text-sm font-mono" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Context Sentence</label>
+            <textarea id="form-sentence" rows="2" placeholder="Enter a sentence using this word in daily life..."
+              class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 text-sm"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Category</label>
+            <select id="form-category" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 text-sm bg-white">
+              <option value="Daily Life">Daily Life</option>
+              <option value="Agriculture">Agriculture</option>
+              <option value="Nature">Nature</option>
+              <option value="Food">Food</option>
+              <option value="Festival">Festival</option>
+              <option value="Culture">Culture</option>
+              <option value="Family">Family</option>
+            </select>
+          </div>
+
+          <!-- Audio Upload / Mic Option -->
+          <div class="border border-dashed border-slate-300 rounded-xl p-4 bg-slate-50 text-center">
+            <div class="text-xs text-slate-500 mb-2">Optional Audio Pronunciation Recording</div>
+            <div class="flex justify-center gap-3">
+              <button type="button" onclick="simulateMicRecord()" class="px-4 py-2 bg-red-50 text-red-700 rounded-lg text-xs font-semibold hover:bg-red-100 transition flex items-center gap-2">
+                <i class="fa-solid fa-microphone"></i> Record Audio
+              </button>
+              <label class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer flex items-center gap-2">
+                <i class="fa-solid fa-upload"></i> Upload Audio File
+                <input type="file" accept="audio/*" class="hidden" />
+              </label>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-2 pt-2">
+            <input type="checkbox" id="consent-check" required class="mt-1 rounded text-emerald-800 focus:ring-emerald-700" />
+            <label for="consent-check" class="text-xs text-slate-600 leading-snug">
+              I confirm that I have permission to share this cultural language material for digital preservation.
+            </label>
+          </div>
+
+          <button type="submit" class="btn-primary w-full py-3 rounded-xl font-bold text-base shadow-md">
+            Submit Entry for Verification
+          </button>
+        </form>
+      </div>
+
+    </section>
+
+
+    <!-- ---------------- SECTION 6: ABOUT PROJECT PAGE ---------------- -->
+    <section id="sec-about" class="hidden py-10 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+      
+      <div class="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm mb-8">
+        <div class="max-w-3xl mb-8">
+          <span class="inline-block bg-emerald-100 text-emerald-900 text-xs font-bold px-3 py-1 rounded-full mb-3">Community Engagement Project</span>
+          <h1 class="text-3xl font-extrabold text-slate-900 mb-3">About BhashaLok</h1>
+          <p class="text-slate-600 leading-relaxed">
+            Many regional languages and native dialects face the risk of disappearing. BhashaLok documents, preserves, and shares these linguistic treasures for future generations through digital archiving and open-access research tools.
+          </p>
+        </div>
+
+        <!-- Workflow Diagram -->
+        <h3 class="text-lg font-bold text-slate-900 mb-4">Our Fieldwork & Preservation Process</h3>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-center mb-8">
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-900 flex items-center justify-center font-bold mx-auto mb-2">1</div>
+            <div class="text-xs font-bold text-slate-800 mb-1">Community Identification</div>
+            <div class="text-[11px] text-slate-500">Engaging with native elders</div>
+          </div>
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-900 flex items-center justify-center font-bold mx-auto mb-2">2</div>
+            <div class="text-xs font-bold text-slate-800 mb-1">Informed Consent</div>
+            <div class="text-[11px] text-slate-500">Ethical cultural recording</div>
+          </div>
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-900 flex items-center justify-center font-bold mx-auto mb-2">3</div>
+            <div class="text-xs font-bold text-slate-800 mb-1">Audio & Text Capture</div>
+            <div class="text-[11px] text-slate-500">High-fidelity recordings</div>
+          </div>
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-900 flex items-center justify-center font-bold mx-auto mb-2">4</div>
+            <div class="text-xs font-bold text-slate-800 mb-1">Data Structuring</div>
+            <div class="text-[11px] text-slate-500">IPA & Soundex mapping</div>
+          </div>
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-900 flex items-center justify-center font-bold mx-auto mb-2">5</div>
+            <div class="text-xs font-bold text-slate-800 mb-1">Digital Archive</div>
+            <div class="text-[11px] text-slate-500">Open web access</div>
+          </div>
+        </div>
+
+        <!-- Project Statistics Grid -->
+        <h3 class="text-lg font-bold text-slate-900 mb-4">Project Impact Hours</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="p-4 bg-emerald-900 text-white rounded-xl text-center">
+            <div class="text-2xl font-extrabold">45</div>
+            <div class="text-xs text-emerald-200">Total Project Hours</div>
+          </div>
+          <div class="p-4 bg-emerald-800 text-white rounded-xl text-center">
+            <div class="text-2xl font-extrabold">20</div>
+            <div class="text-xs text-emerald-200">Field Data Collection Hours</div>
+          </div>
+          <div class="p-4 bg-emerald-700 text-white rounded-xl text-center">
+            <div class="text-2xl font-extrabold">15</div>
+            <div class="text-xs text-emerald-200">Technical Development Hours</div>
+          </div>
+          <div class="p-4 bg-emerald-600 text-white rounded-xl text-center">
+            <div class="text-2xl font-extrabold">10</div>
+            <div class="text-xs text-emerald-200">Preparation & Report Hours</div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+
+    <!-- ---------------- SECTION 7: ADMIN PORTAL PAGE ---------------- -->
+    <section id="sec-admin" class="hidden py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      
+      <div class="mb-6 flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900">Manage Entries</h1>
+          <p class="text-xs text-slate-500">View, edit, and review regional dictionary entries.</p>
+        </div>
+        <button onclick="fetchAdminEntries()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition">
+          <i class="fa-solid fa-rotate-right mr-1"></i> Refresh Table
+        </button>
+      </div>
+
+      <!-- Admin Quick Stats -->
+      <div class="grid grid-cols-3 gap-6 mb-6">
+        <div class="bg-white p-5 rounded-xl border border-slate-200">
+          <div class="text-xs font-bold text-slate-400 uppercase">Total Entries</div>
+          <div id="admin-total-count" class="text-3xl font-extrabold text-slate-900 mt-1">245</div>
+        </div>
+        <div class="bg-white p-5 rounded-xl border border-slate-200">
+          <div class="text-xs font-bold text-slate-400 uppercase">Active Contributors</div>
+          <div id="admin-contributors-count" class="text-3xl font-extrabold text-slate-900 mt-1">12</div>
+        </div>
+        <div class="bg-white p-5 rounded-xl border border-slate-200">
+          <div class="text-xs font-bold text-amber-500 uppercase">Pending Approvals</div>
+          <div id="admin-pending-count" class="text-3xl font-extrabold text-amber-600 mt-1">5</div>
+        </div>
+      </div>
+
+      <!-- Admin Table -->
+      <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50 text-slate-500 text-xs uppercase border-b border-slate-200">
+              <th class="py-3.5 px-4 font-semibold">Word</th>
+              <th class="py-3.5 px-4 font-semibold">Meaning</th>
+              <th class="py-3.5 px-4 font-semibold">Category</th>
+              <th class="py-3.5 px-4 font-semibold">Status</th>
+              <th class="py-3.5 px-4 font-semibold text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody id="admin-table-body" class="divide-y divide-slate-100 text-sm">
+            <!-- Dynamic Admin Rows -->
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <!-- ==================== WORD DETAIL MODAL ==================== -->
+  <div id="word-detail-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <button onclick="closeWordDetailModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl p-2">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div id="modal-content">
+        <!-- Modal content filled via JS -->
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ==================== TOAST NOTIFICATIONS CONTAINER ==================== -->
+  <div id="toast-container"></div>
+
+
+  <!-- ==================== FOOTER ==================== -->
+  <footer class="bg-slate-900 text-slate-400 py-10 border-t border-slate-800 text-sm mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center md:text-left md:flex justify-between items-center">
+      <div class="mb-4 md:mb-0">
+        <div class="font-bold text-white text-lg">BhashaLok</div>
+        <p class="text-xs text-slate-500 mt-1">Digital Preservation of Regional Languages and Dialects Initiative.</p>
+      </div>
+      <div class="text-xs text-slate-500">
+        &copy; 2026 BhashaLok Preserver. Built for Community Engagement Project (CEP).
+      </div>
+    </div>
+  </footer>
+
+  <!-- JavaScript Entry File -->
+  <script src="script.js"></script>
+</body>
+</html>

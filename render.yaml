@@ -10,8 +10,9 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.0
 
-  # 2. BhashaLok Frontend Static Site
-  - type: static
+  # 2. BhashaLok Frontend Static Web Service
+  - type: web
     name: roottalk-frontend
+    env: static
     rootDir: frontend
-    publishDir: .
+    staticPublishPath: .

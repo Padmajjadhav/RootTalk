@@ -1,13 +1,14 @@
 import datetime
-from sqlalchemy import Column, Integer, String, Text, Float, DateTime, ForeignKey, Enum, Boolean
-from sqlalchemy.orm import relationship
 import enum
+from sqlalchemy import Column, Integer, String, Text, Float, DateTime, ForeignKey, Boolean
+from sqlalchemy.orm import relationship
 from app.database import Base
 
 class UserRole(str, enum.Enum):
     ADMIN = "Admin"
     LINGUIST = "Linguist"
     CONTRIBUTOR = "Contributor"
+    LISTENER = "Listener"
 
 class EndangermentStatus(str, enum.Enum):
     SAFE = "Safe"
@@ -26,114 +27,232 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(50), unique=True, index=True, nullable=False)
-    email = Column(String(100), unique=True, index=True, nullable=False)
+    username = Column(String(100), unique=True, index=True, nullable=False)
+    email = Column(String(150), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
-    full_name = Column(String(100), nullable=True)
-    role = Column(String(20), default=UserRole.CONTRIBUTOR)
-    reputation_points = Column(Integer, default=10)
-    badge_title = Column(String(50), default="Linguistic Enthusiast")
+    full_name = Column(String(150), nullable=True)
+    role = Column(String(50), default="Contributor")
+    reputation_points = Column(Integer, default=0)
+    badge_title = Column(String(100), default="Preservation Enthusiast")
+    bio = Column(Text, nullable=True)
+    location = Column(String(100), nullable=True)
+    district = Column(String(100), nullable=True)
+    profile_image = Column(String(255), nullable=True)
+    is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
-    lexicon_entries = relationship("LexiconEntry", back_populates="submitted_by", foreign_keys="LexiconEntry.submitted_by_id")
-    audio_archives = relationship("AudioArchive", back_populates="submitted_by")
-
-class Dialect(Base):
-    __tablename__ = "dialects"
+class LanguageVariety(Base):
+    __tablename__ = "languages_varieties"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), index=True, nullable=False) # e.g. Malvani
-    parent_language = Column(String(100), index=True, nullable=False) # e.g. Marathi
-    code = Column(String(20), unique=True, index=True, nullable=False) # e.g. mar-mal
-    region_name = Column(String(100), nullable=False) # e.g. Konkan Region
-    state = Column(String(100), nullable=False) # e.g. Maharashtra
-    districts = Column(String(255), nullable=True) # e.g. Sindhudurg, Ratnagiri
-    latitude = Column(Float, nullable=True) # 16.0000
-    longitude = Column(Float, nullable=True) # 73.5000
-    endangerment_status = Column(String(30), default=EndangermentStatus.VULNERABLE)
-    estimated_speakers = Column(Integer, nullable=True)
+    name = Column(String(100), unique=True, index=True, nullable=False)
     description = Column(Text, nullable=True)
+    region = Column(String(100), nullable=True)
+    code = Column(String(20), unique=True, index=True, nullable=True)
+    parent_language = Column(String(100), default="Marathi")
+    region_name = Column(String(100), nullable=True)
+    state = Column(String(100), default="Maharashtra")
+    districts = Column(String(255), nullable=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    endangerment_status = Column(String(50), default="Vulnerable")
+    estimated_speakers = Column(Integer, default=50000)
     cultural_notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
-    lexicon_entries = relationship("LexiconEntry", back_populates="dialect", cascade="all, delete-orphan")
-    audio_archives = relationship("AudioArchive", back_populates="dialect", cascade="all, delete-orphan")
-    quizzes = relationship("QuizDeck", back_populates="dialect", cascade="all, delete-orphan")
+    entries = relationship("Entry", back_populates="dialect")
+    audio_archives = relationship("VoiceRecording", back_populates="dialect")
 
-class LexiconEntry(Base):
-    __tablename__ = "lexicon_entries"
+Dialect = LanguageVariety
+
+class Category(Base):
+    __tablename__ = "categories"
 
     id = Column(Integer, primary_key=True, index=True)
-    dialect_id = Column(Integer, ForeignKey("dialects.id"), nullable=False)
-    term = Column(String(150), index=True, nullable=False) # Dialect Word/Phrase
-    script = Column(String(50), default="Devanagari")
-    ipa_transcription = Column(String(150), nullable=True) # International Phonetic Alphabet
-    phonetic_code = Column(String(100), index=True, nullable=True) # Phonetic indexing key
-    meaning_en = Column(Text, nullable=False)
-    meaning_standard_lang = Column(Text, nullable=False) # Standard Marathi / Hindi translation
-    part_of_speech = Column(String(50), nullable=True) # Noun, Verb, Idiom, etc.
-    example_sentence_dialect = Column(Text, nullable=True)
+    name = Column(String(100), unique=True, index=True, nullable=False)
+    description = Column(Text, nullable=True)
+
+class Contributor(Base):
+    __tablename__ = "contributors"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    location = Column(String(100), nullable=True)
+    district = Column(String(100), nullable=True)
+    role = Column(String(100), nullable=True)
+    bio = Column(Text, nullable=True)
+    profile_image = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    entries = relationship("Entry", back_populates="contributor")
+    voice_recordings = relationship("VoiceRecording", back_populates="contributor")
+
+class Entry(Base):
+    __tablename__ = "entries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    word = Column(String(150), index=True, nullable=False)
+    transliteration = Column(String(150), nullable=True)
+    meaning = Column(Text, nullable=False)
+    meaning_standard_lang = Column(Text, nullable=True)
+    language = Column(String(50), default="Marathi")
+    variety = Column(String(100), index=True, default="Standard Marathi")
+    dialect_id = Column(Integer, ForeignKey("languages_varieties.id"), nullable=True)
+    category = Column(String(100), index=True, nullable=False)
+    region = Column(String(100), index=True, nullable=True)
+    district = Column(String(100), index=True, nullable=True)
+    taluka = Column(String(100), nullable=True)
+    example_sentence = Column(Text, nullable=True)
     example_sentence_translation = Column(Text, nullable=True)
+    ipa_transcription = Column(String(150), nullable=True)
+    phonetic_code = Column(String(100), nullable=True)
+    part_of_speech = Column(String(50), default="Noun")
     etymology = Column(Text, nullable=True)
-    semantic_category = Column(String(50), index=True, default="Daily Life") # Folklore, Agriculture, Maritime, etc.
-    audio_sample_url = Column(String(255), nullable=True)
+    pronunciation = Column(String(150), nullable=True)
+    audio_url = Column(String(255), nullable=True)
+    contributor_id = Column(Integer, ForeignKey("contributors.id"), nullable=True)
     submitted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    verification_status = Column(String(20), default=VerificationStatus.PENDING)
     verified_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    source = Column(String(100), default="Survey Data")
+    status = Column(String(50), default="published")
+    verification_status = Column(String(50), default="Verified")
     upvotes = Column(Integer, default=0)
     downvotes = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
-    dialect = relationship("Dialect", back_populates="lexicon_entries")
-    submitted_by = relationship("User", foreign_keys=[submitted_by_id], back_populates="lexicon_entries")
+    dialect = relationship("LanguageVariety", back_populates="entries")
+    contributor = relationship("Contributor", back_populates="entries")
+    voice_recordings = relationship("VoiceRecording", back_populates="entry", cascade="all, delete-orphan")
 
-class AudioArchive(Base):
-    __tablename__ = "audio_archives"
+    @property
+    def term(self):
+        return self.word
+
+    @term.setter
+    def term(self, value):
+        self.word = value
+
+    @property
+    def script(self):
+        return self.transliteration or "Devanagari"
+
+    @script.setter
+    def script(self, value):
+        self.transliteration = value
+
+    @property
+    def meaning_en(self):
+        return self.meaning
+
+    @meaning_en.setter
+    def meaning_en(self, value):
+        self.meaning = value
+
+    @property
+    def semantic_category(self):
+        return self.category
+
+    @semantic_category.setter
+    def semantic_category(self, value):
+        self.category = value
+
+    @property
+    def example_sentence_dialect(self):
+        return self.example_sentence
+
+    @example_sentence_dialect.setter
+    def example_sentence_dialect(self, value):
+        self.example_sentence = value
+
+    @property
+    def audio_sample_url(self):
+        return self.audio_url
+
+    @audio_sample_url.setter
+    def audio_sample_url(self, value):
+        self.audio_url = value
+
+LexiconEntry = Entry
+
+class VoiceRecording(Base):
+    __tablename__ = "voice_recordings"
 
     id = Column(Integer, primary_key=True, index=True)
-    dialect_id = Column(Integer, ForeignKey("dialects.id"), nullable=False)
-    title = Column(String(200), index=True, nullable=False)
-    genre = Column(String(50), index=True, nullable=False) # Folk Tale, Ovi, Oral History, Proverb
+    entry_id = Column(Integer, ForeignKey("entries.id"), nullable=True)
+    contributor_id = Column(Integer, ForeignKey("contributors.id"), nullable=True)
+    dialect_id = Column(Integer, ForeignKey("languages_varieties.id"), nullable=True)
+    submitted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    audio_file = Column(String(255), nullable=False)
+    title = Column(String(200), nullable=True)
+    genre = Column(String(100), default="Culture")
     speaker_name = Column(String(100), nullable=True)
     speaker_age = Column(Integer, nullable=True)
     speaker_gender = Column(String(20), nullable=True)
-    locality = Column(String(100), nullable=True)
-    audio_file_path = Column(String(255), nullable=False)
-    duration_seconds = Column(Float, default=0.0)
-    waveform_json = Column(Text, nullable=True) # Normalized amplitude peaks for backend waveform visualization
-    transcript_text = Column(Text, nullable=True) # Original dialect transcript
+    locality = Column(String(150), nullable=True)
+    duration = Column(Float, default=0.0)
+    waveform_json = Column(Text, nullable=True)
+    language = Column(String(50), default="Marathi")
+    variety = Column(String(100), nullable=True)
+    region = Column(String(100), nullable=True)
+    transcript = Column(Text, nullable=True)
     transcript_translation_en = Column(Text, nullable=True)
     transcript_translation_standard = Column(Text, nullable=True)
-    srt_subtitles = Column(Text, nullable=True) # Generated Subtitle file content
-    submitted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    verification_status = Column(String(20), default=VerificationStatus.PENDING)
+    srt_subtitles = Column(Text, nullable=True)
+    verification_status = Column(String(50), default="Verified")
     views_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
-    dialect = relationship("Dialect", back_populates="audio_archives")
-    submitted_by = relationship("User", foreign_keys=[submitted_by_id], back_populates="audio_archives")
+    entry = relationship("Entry", back_populates="voice_recordings")
+    contributor = relationship("Contributor", back_populates="voice_recordings")
+    dialect = relationship("LanguageVariety", back_populates="audio_archives")
+
+    @property
+    def audio_file_path(self):
+        return self.audio_file
+
+    @audio_file_path.setter
+    def audio_file_path(self, value):
+        self.audio_file = value
+
+    @property
+    def duration_seconds(self):
+        return self.duration
+
+    @duration_seconds.setter
+    def duration_seconds(self, value):
+        self.duration = value
+
+    @property
+    def transcript_text(self):
+        return self.transcript
+
+    @transcript_text.setter
+    def transcript_text(self, value):
+        self.transcript = value
+
+AudioArchive = VoiceRecording
 
 class LexiconVote(Base):
     __tablename__ = "lexicon_votes"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    lexicon_id = Column(Integer, ForeignKey("lexicon_entries.id"), nullable=False)
-    vote = Column(Integer, nullable=False) # +1 or -1
-    comment = Column(String(255), nullable=True)
+    lexicon_id = Column(Integer, ForeignKey("entries.id"), nullable=False)
+    vote = Column(Integer, nullable=False)
+    comment = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 class QuizDeck(Base):
     __tablename__ = "quiz_decks"
 
     id = Column(Integer, primary_key=True, index=True)
-    dialect_id = Column(Integer, ForeignKey("dialects.id"), nullable=False)
-    title = Column(String(150), nullable=False)
+    dialect_id = Column(Integer, ForeignKey("languages_varieties.id"), nullable=True)
+    title = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
-    difficulty = Column(String(30), default="Beginner") # Beginner, Intermediate, Expert
+    difficulty = Column(String(50), default="Beginner")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
-    dialect = relationship("Dialect", back_populates="quizzes")
     questions = relationship("QuizQuestion", back_populates="deck", cascade="all, delete-orphan")
 
 class QuizQuestion(Base):
@@ -142,11 +261,11 @@ class QuizQuestion(Base):
     id = Column(Integer, primary_key=True, index=True)
     deck_id = Column(Integer, ForeignKey("quiz_decks.id"), nullable=False)
     question_text = Column(Text, nullable=False)
-    option_a = Column(String(200), nullable=False)
-    option_b = Column(String(200), nullable=False)
-    option_c = Column(String(200), nullable=False)
-    option_d = Column(String(200), nullable=False)
-    correct_option = Column(String(1), nullable=False) # 'A', 'B', 'C', or 'D'
+    option_a = Column(String(255), nullable=False)
+    option_b = Column(String(255), nullable=False)
+    option_c = Column(String(255), nullable=False)
+    option_d = Column(String(255), nullable=False)
+    correct_option = Column(String(1), nullable=False)
     explanation = Column(Text, nullable=True)
 
     deck = relationship("QuizDeck", back_populates="questions")

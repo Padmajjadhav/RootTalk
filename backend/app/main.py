@@ -1,5 +1,7 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 
 from app.config import settings
@@ -7,7 +9,8 @@ from app.database import engine, Base, SessionLocal
 from app.services.seed_data import seed_database
 from app.api import (
     auth, dialects, lexicon, audio_archive,
-    contributions, quizzes, analytics, websockets
+    contributions, quizzes, analytics, websockets,
+    entries, categories, contributors, voices
 )
 
 @asynccontextmanager
@@ -28,7 +31,7 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     description="""
-# 🎙️ Digital Preservation of Regional Languages & Dialects API Backend
+# 🎙️ BhashaLok — Digital Preservation of Marathi Regional Language & Dialects API
 
 A high-performance, interactive backend engine for preserving endangered regional languages, dialects, oral folklore, and phonetic heritage.
 
@@ -61,7 +64,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register API Routers
+# Static Uploads directory
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+# Register API Routers (v1 prefix)
 app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(dialects.router, prefix=settings.API_V1_STR)
 app.include_router(lexicon.router, prefix=settings.API_V1_STR)
@@ -70,6 +78,13 @@ app.include_router(contributions.router, prefix=settings.API_V1_STR)
 app.include_router(quizzes.router, prefix=settings.API_V1_STR)
 app.include_router(analytics.router, prefix=settings.API_V1_STR)
 app.include_router(websockets.router, prefix=settings.API_V1_STR)
+
+# Register BhashaLok Direct API Endpoints under /api and /api/v1
+for prefix in ["/api", "/api/v1"]:
+    app.include_router(entries.router, prefix=prefix)
+    app.include_router(categories.router, prefix=prefix)
+    app.include_router(contributors.router, prefix=prefix)
+    app.include_router(voices.router, prefix=prefix)
 
 @app.get("/", tags=["Health & Root"])
 def root():
@@ -80,5 +95,5 @@ def root():
         "interactive_docs": "/docs",
         "redoc_docs": "/redoc",
         "api_v1_endpoint": settings.API_V1_STR,
-        "message": "Welcome to the Digital Preservation of Regional Languages and Dialects API Backend Engine!"
+        "message": "Welcome to BhashaLok — Digital Preservation of Regional Languages and Dialects API Backend Engine!"
     }

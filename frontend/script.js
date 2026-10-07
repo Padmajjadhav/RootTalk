@@ -27,7 +27,7 @@ const fallbackLexicon = [
     speaker_name: "Sushila Tai",
     verification_status: "Verified",
     upvotes: 24,
-    audio_sample_url: "https://actions.google.com/sounds/v1/human/speech_male_cheerful.ogg"
+    audio_sample_url: "https://sdml.ac.in/story/Katta/1/fullstory.wav"
   },
   {
     id: 2,
@@ -44,7 +44,7 @@ const fallbackLexicon = [
     speaker_name: "Ganpat Kaka",
     verification_status: "Verified",
     upvotes: 19,
-    audio_sample_url: "https://actions.google.com/sounds/v1/human/speech_female_giggle.ogg"
+    audio_sample_url: "https://sdml.ac.in/story/Dandi/2/fullstory.wav"
   },
   {
     id: 3,
@@ -61,12 +61,17 @@ const fallbackLexicon = [
     speaker_name: "Ramesh Patil",
     verification_status: "Verified",
     upvotes: 40,
-    audio_sample_url: "https://actions.google.com/sounds/v1/human/speech_male_cheerful.ogg"
+    audio_sample_url: "https://sdml.ac.in/story/Mandwa/1/fullstory.wav"
   }
 ];
 
 // Initialize Application & Connect to Live FastAPI Backend
 document.addEventListener("DOMContentLoaded", async () => {
+  // Pre-load Web Speech voices
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.getVoices();
+  }
+
   await fetchBackendStats();
   await fetchLexiconEntries();
   await fetchAudioRecordings();
@@ -139,7 +144,7 @@ async function fetchAudioRecordings() {
         speaker: "Ganpat Kaka",
         topic: "Agriculture",
         duration: "02:14",
-        streamUrl: "https://actions.google.com/sounds/v1/human/speech_male_cheerful.ogg",
+        streamUrl: "https://sdml.ac.in/story/Brahmanwada/1/fullstory.wav",
         img: "assets/rural_folklore_elder.jpg"
       },
       {
@@ -148,7 +153,7 @@ async function fetchAudioRecordings() {
         speaker: "Sushila Tai",
         topic: "Culture",
         duration: "03:21",
-        streamUrl: "https://actions.google.com/sounds/v1/human/speech_female_giggle.ogg",
+        streamUrl: "https://sdml.ac.in/story/Katta/1/fullstory.wav",
         img: "assets/marathi_culture_festival.jpg"
       },
       {
@@ -157,7 +162,7 @@ async function fetchAudioRecordings() {
         speaker: "Ramesh Patil",
         topic: "Daily Life",
         duration: "01:48",
-        streamUrl: "https://actions.google.com/sounds/v1/human/speech_male_cheerful.ogg",
+        streamUrl: "https://sdml.ac.in/story/Dandi/2/fullstory.wav",
         img: "assets/konkan_heritage.jpg"
       }
     ];
@@ -219,8 +224,9 @@ function renderLexiconGrid(items) {
   items.forEach(item => {
     const card = document.createElement("div");
     card.className = "bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between";
-    const audioUrl = item.audio_sample_url || "https://actions.google.com/sounds/v1/human/speech_male_cheerful.ogg";
-    
+    const audioUrl = item.audio_sample_url || "";
+    const escapedTerm = item.term.replace(/'/g, "\\'");
+
     card.innerHTML = `
       <div>
         <div class="flex items-center justify-between mb-2">
@@ -234,8 +240,8 @@ function renderLexiconGrid(items) {
       </div>
 
       <div class="flex items-center justify-between pt-4 mt-4 border-t border-slate-100">
-        <button onclick="playSampleAudio('${audioUrl}')" class="play-btn">
-          <i class="fa-solid fa-play text-sm ml-0.5"></i>
+        <button onclick="playSampleAudio('${audioUrl}', '${escapedTerm}')" class="play-btn">
+          <i class="fa-solid fa-volume-high text-sm ml-0.5"></i>
         </button>
         <button onclick="openWordDetailModal(${item.id})" class="text-xs font-bold text-slate-600 hover:text-emerald-800 flex items-center gap-1">
           Details <i class="fa-solid fa-chevron-right text-[10px]"></i>
@@ -297,15 +303,38 @@ function triggerHeroSearch() {
   }
 }
 
-// --- AUDIO PLAYBACK CONTROL ---
-function playSampleAudio(audioUrl) {
-  if (activeAudio) {
-    activeAudio.pause();
+// --- HIGH-RELIABILITY AUDIO & TEXT-TO-SPEECH PRONUNCIATION ---
+function playSampleAudio(audioUrl, textToSpeak = "मायाळू") {
+  // 1. Web Speech Synthesis Text-To-Speech (Native Marathi / Indic Pronunciation)
+  if ('speechSynthesis' in window && textToSpeak) {
+    window.speechSynthesis.cancel(); // Stop any previous speech
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.lang = "mr-IN"; // Marathi Language Code
+    utterance.rate = 0.85;    // Clear pronunciation pace
+    utterance.pitch = 1.0;
+
+    // Pick best available Indic voice
+    const voices = window.speechSynthesis.getVoices();
+    const marathiVoice = voices.find(v => v.lang.includes("mr") || v.lang.includes("hi") || v.name.includes("India"));
+    if (marathiVoice) {
+      utterance.voice = marathiVoice;
+    }
+
+    window.speechSynthesis.speak(utterance);
+    showToast(`🔊 Pronouncing: "${textToSpeak}"`);
+    return;
   }
-  activeAudio = new Audio(audioUrl);
-  activeAudio.play().catch(e => {
-    showToast("Playing audio sample...");
-  });
+
+  // 2. Audio File Fallback if SpeechSynthesis not present
+  if (audioUrl) {
+    if (activeAudio) {
+      activeAudio.pause();
+    }
+    activeAudio = new Audio(audioUrl);
+    activeAudio.play().catch(e => {
+      showToast(`🔊 Word: "${textToSpeak}"`);
+    });
+  }
 }
 
 // --- WORD DETAIL MODAL ---
@@ -313,7 +342,8 @@ function openWordDetailModal(id) {
   const item = lexiconData.find(x => x.id === id) || lexiconData[0];
   const modal = document.getElementById("word-detail-modal");
   const content = document.getElementById("modal-content");
-  const audioUrl = item.audio_sample_url || "https://actions.google.com/sounds/v1/human/speech_male_cheerful.ogg";
+  const audioUrl = item.audio_sample_url || "";
+  const escapedTerm = item.term.replace(/'/g, "\\'");
 
   content.innerHTML = `
     <div class="flex items-center gap-4 mb-4">
@@ -327,14 +357,19 @@ function openWordDetailModal(id) {
     </div>
 
     <!-- Audio Control -->
-    <div class="bg-slate-100 rounded-xl p-3 flex items-center gap-3 mb-6">
-      <button onclick="playSampleAudio('${audioUrl}')" class="play-btn w-10 h-10">
-        <i class="fa-solid fa-play text-xs"></i>
-      </button>
-      <div class="flex-grow">
-        <div class="text-xs font-semibold text-slate-700">Audio Pronunciation</div>
-        <div class="text-[11px] text-slate-500">Live Backend Stream • Verified Pronunciation</div>
+    <div class="bg-slate-100 rounded-xl p-4 flex items-center justify-between gap-3 mb-6 border border-slate-200">
+      <div class="flex items-center gap-3">
+        <button onclick="playSampleAudio('${audioUrl}', '${escapedTerm}')" class="play-btn w-12 h-12 shadow-sm">
+          <i class="fa-solid fa-volume-high text-base"></i>
+        </button>
+        <div>
+          <div class="text-sm font-bold text-slate-800">Listen Pronunciation</div>
+          <div class="text-xs text-slate-500">Native Marathi Dialect Voice</div>
+        </div>
       </div>
+      <button onclick="playSampleAudio('${audioUrl}', '${escapedTerm}')" class="px-4 py-2 bg-emerald-800 text-white rounded-lg text-xs font-semibold hover:bg-emerald-900 transition">
+        <i class="fa-solid fa-play mr-1"></i> Speak Out Loud
+      </button>
     </div>
 
     <div class="space-y-4 text-sm">
@@ -355,7 +390,7 @@ function openWordDetailModal(id) {
 
       <div class="p-3 bg-slate-50 rounded-xl">
         <span class="text-xs font-bold uppercase text-slate-400 block mb-0.5">Context Sentence</span>
-        <p class="italic text-slate-700 mb-1">"${item.example_sentence_dialect || 'आजु ख़य चाललोस रे तू?'}"</p>
+        <p class="italic text-slate-700 mb-1">"${item.example_sentence_dialect || 'तो मायाळू माणूस सगळ्यांची काळजी घेतो.'}"</p>
         <p class="text-xs text-slate-500">Translation: ${item.example_sentence_translation || 'Where are you heading today?'}</p>
       </div>
     </div>
@@ -377,6 +412,8 @@ function renderAudioRecordings(recordings) {
   recordings.forEach(rec => {
     const card = document.createElement("div");
     card.className = "bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col md:flex-row gap-5 items-center justify-between";
+    const escapedTitle = rec.title.replace(/'/g, "\\'");
+
     card.innerHTML = `
       <div class="flex items-center gap-4 w-full md:w-auto">
         <img src="${rec.img}" class="w-20 h-20 rounded-xl object-cover shadow-sm flex-shrink-0 border border-slate-100" />
@@ -387,7 +424,7 @@ function renderAudioRecordings(recordings) {
         </div>
       </div>
 
-      <button onclick="playSampleAudio('${rec.streamUrl}')" class="btn-primary px-6 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 shadow-sm w-full md:w-auto justify-center">
+      <button onclick="playSampleAudio('${rec.streamUrl}', '${escapedTitle}')" class="btn-primary px-6 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 shadow-sm w-full md:w-auto justify-center">
         <i class="fa-solid fa-play"></i> Play Recording
       </button>
     `;

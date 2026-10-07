@@ -83,8 +83,8 @@ async function fetchBackendStats() {
       const data = await res.json();
       document.getElementById("stat-words").innerText = (data.total_words_preserved || 1240).toLocaleString();
       document.getElementById("stat-audio").innerText = (data.total_audio_recordings || 380).toLocaleString();
-      document.getElementById("stat-contributors").innerText = (data.total_active_contributors || 12).toLocaleString();
-      document.getElementById("stat-dialects").innerText = (data.total_dialects || 4).toLocaleString();
+      document.getElementById("stat-contributors").innerText = "3";
+      document.getElementById("stat-dialects").innerText = (data.total_dialects || 35).toLocaleString();
     }
   } catch (err) {
     console.warn("Backend server connecting... Using local cached metrics.");
@@ -110,18 +110,25 @@ async function fetchLexiconEntries() {
 
 // 3. Fetch Audio Archives
 async function fetchAudioRecordings() {
+  const defaultImages = [
+    "assets/rural_folklore_elder.jpg",
+    "assets/konkan_heritage.jpg",
+    "assets/marathi_culture_festival.jpg",
+    "assets/ancient_manuscript.jpg"
+  ];
+
   try {
     const res = await fetch(`${API_BASE}/audio-archive/`);
     if (res.ok) {
       const data = await res.json();
-      audioVoices = data.map(item => ({
+      audioVoices = data.map((item, idx) => ({
         id: item.id,
         title: item.title,
         speaker: item.speaker_name || "Native Speaker",
         topic: item.genre || "Culture",
         duration: item.duration_seconds ? `00:${Math.round(item.duration_seconds)}` : "01:45",
-        streamUrl: `${API_BASE}/audio-archive/${item.id}/stream`,
-        img: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=400&auto=format&fit=crop"
+        streamUrl: item.audio_file_path.startsWith("http") ? item.audio_file_path : `${API_BASE}/audio-archive/${item.id}/stream`,
+        img: defaultImages[idx % defaultImages.length]
       }));
     }
   } catch (err) {
@@ -133,7 +140,7 @@ async function fetchAudioRecordings() {
         topic: "Agriculture",
         duration: "02:14",
         streamUrl: "https://actions.google.com/sounds/v1/human/speech_male_cheerful.ogg",
-        img: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=400&auto=format&fit=crop"
+        img: "assets/rural_folklore_elder.jpg"
       },
       {
         id: 102,
@@ -142,7 +149,16 @@ async function fetchAudioRecordings() {
         topic: "Culture",
         duration: "03:21",
         streamUrl: "https://actions.google.com/sounds/v1/human/speech_female_giggle.ogg",
-        img: "https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=400&auto=format&fit=crop"
+        img: "assets/marathi_culture_festival.jpg"
+      },
+      {
+        id: 103,
+        title: "Life in the Konkan Fishing Village",
+        speaker: "Ramesh Patil",
+        topic: "Daily Life",
+        duration: "01:48",
+        streamUrl: "https://actions.google.com/sounds/v1/human/speech_male_cheerful.ogg",
+        img: "assets/konkan_heritage.jpg"
       }
     ];
   }
@@ -363,7 +379,7 @@ function renderAudioRecordings(recordings) {
     card.className = "bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col md:flex-row gap-5 items-center justify-between";
     card.innerHTML = `
       <div class="flex items-center gap-4 w-full md:w-auto">
-        <img src="${rec.img}" class="w-16 h-16 rounded-xl object-cover shadow-sm flex-shrink-0" />
+        <img src="${rec.img}" class="w-20 h-20 rounded-xl object-cover shadow-sm flex-shrink-0 border border-slate-100" />
         <div>
           <span class="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full">${rec.topic}</span>
           <h3 class="font-bold text-slate-900 text-lg mt-1">${rec.title}</h3>

@@ -35,10 +35,10 @@ body {
   border-bottom: 2px solid var(--primary-green);
 }
 
-/* Hero Section Background */
+/* Hero Section Background with User Fieldwork Banner */
 .hero-section {
-  background: linear-gradient(180deg, rgba(27, 77, 62, 0.85) 0%, rgba(27, 77, 62, 0.95) 100%),
-              url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=1600&auto=format&fit=crop');
+  background: linear-gradient(180deg, rgba(15, 45, 35, 0.75) 0%, rgba(15, 45, 35, 0.90) 100%),
+              url('../assets/hero_fieldwork.jpg');
   background-size: cover;
   background-position: center;
   color: white;

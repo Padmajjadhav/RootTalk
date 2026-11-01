@@ -506,14 +506,22 @@ def test_websocket_activity_event_delivery(client):
 
 
 def test_production_security_and_database_config():
-    # 1. PostgreSQL URL prefix normalization (postgres:// -> postgresql://)
+    # 1. PostgreSQL URL prefix normalization (postgres:// and postgresql:// -> postgresql+psycopg2://)
     test_pg_url = "postgres://roottalk_user:secret_pass@ep-server.render.com:5432/roottalk"
     os.environ["DATABASE_URL"] = test_pg_url
     os.environ["ENVIRONMENT"] = "development"
     
     test_settings = Settings()
-    assert test_settings.DATABASE_URL.startswith("postgresql://")
+    assert test_settings.DATABASE_URL.startswith("postgresql+psycopg2://")
     assert not test_settings.DATABASE_URL.startswith("postgres://")
+    assert not test_settings.DATABASE_URL.startswith("postgresql://")
+
+    # Verify normalization also handles raw postgresql:// without driver
+    test_pg_url_2 = "postgresql://roottalk_user:secret_pass@ep-server.render.com:5432/roottalk"
+    os.environ["DATABASE_URL"] = test_pg_url_2
+    test_settings_2 = Settings()
+    assert test_settings_2.DATABASE_URL.startswith("postgresql+psycopg2://")
+    assert not test_settings_2.DATABASE_URL.startswith("postgresql://")
     del os.environ["DATABASE_URL"]
 
     # 2. Production environment strictly requires explicit, non-default SECRET_KEY

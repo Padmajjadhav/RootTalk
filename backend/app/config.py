@@ -36,9 +36,13 @@ class Settings:
         # Database Configuration (supports PostgreSQL on Render and local SQLite)
         raw_db_url = os.getenv("DATABASE_URL")
         if raw_db_url:
-            # Render provides postgres:// which SQLAlchemy requires as postgresql://
+            # Render provides postgres:// or postgresql://
+            # SQLAlchemy 2.0 defaults postgresql:// to the 'psycopg' (v3) driver.
+            # Normalize PostgreSQL URLs to explicitly use the installed 'psycopg2' driver: postgresql+psycopg2://
             if raw_db_url.startswith("postgres://"):
-                self.DATABASE_URL: str = raw_db_url.replace("postgres://", "postgresql://", 1)
+                self.DATABASE_URL: str = raw_db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+            elif raw_db_url.startswith("postgresql://"):
+                self.DATABASE_URL: str = raw_db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
             else:
                 self.DATABASE_URL: str = raw_db_url
         else:

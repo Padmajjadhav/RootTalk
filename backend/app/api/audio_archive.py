@@ -1,7 +1,7 @@
 import os
 import json
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, Request, Response, status
 from fastapi.responses import StreamingResponse, FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -11,8 +11,9 @@ from app.database import get_db
 from app.models import AudioArchive, Dialect, User, VerificationStatus
 from app.schemas.schemas import AudioArchiveResponse
 from app.services.auth_service import get_current_user, get_optional_user
-from app.services.audio_service import generate_waveform_peaks, generate_srt_subtitles
+from app.services.audio_service import generate_waveform_peaks, generate_srt_subtitles, validate_audio_file
 from app.services.websocket_manager import ws_manager
+from app.services.rate_limiter import rate_limiter
 
 router = APIRouter(prefix="/audio-archive", tags=["Audio & Oral History Archive"])
 
@@ -44,6 +45,7 @@ def list_audio_archives(
 
 @router.post("/upload", response_model=AudioArchiveResponse, status_code=status.HTTP_201_CREATED)
 async def upload_audio_recording(
+    request: Request,
     dialect_id: int = Form(...),
     title: str = Form(...),
     genre: str = Form(...),
@@ -58,25 +60,24 @@ async def upload_audio_recording(
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user)
 ):
+    # Public abuse protection: rate limit unauthenticated uploads
+    if not current_user:
+        rate_limiter.check(request, endpoint_key="audio_contribute")
+
     dialect = db.query(Dialect).filter(Dialect.id == dialect_id).first()
     if not dialect:
         raise HTTPException(status_code=404, detail="Dialect not found")
 
     file_ext = os.path.splitext(file.filename or "")[1].lower()
-    if file_ext not in settings.ALLOWED_AUDIO_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid audio file type '{file_ext}'. Allowed formats: {', '.join(settings.ALLOWED_AUDIO_EXTENSIONS)}"
-        )
-
     contents = await file.read()
-    if len(contents) == 0:
-        raise HTTPException(status_code=400, detail="Uploaded audio file cannot be empty.")
-    if len(contents) > settings.MAX_AUDIO_SIZE_BYTES:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Audio file exceeds maximum allowed limit of {settings.MAX_AUDIO_SIZE_BYTES // (1024 * 1024)}MB."
-        )
+
+    # Deep audio file validation (extension, size, and genuine header magic bytes)
+    validate_audio_file(
+        content=contents,
+        filename=file.filename or "recording.mp3",
+        max_size_bytes=settings.MAX_AUDIO_SIZE_BYTES,
+        allowed_extensions=settings.ALLOWED_AUDIO_EXTENSIONS
+    )
 
     os.makedirs(settings.AUDIO_UPLOAD_DIR, exist_ok=True)
     filename = f"audio_{uuid.uuid4().hex}{file_ext}"
@@ -91,6 +92,9 @@ async def upload_audio_recording(
     # Generate waveform peaks and SRT subtitles
     waveform_data = json.dumps(generate_waveform_peaks(50))
     srt_content = generate_srt_subtitles(transcript_text, duration_seconds=estimated_duration) if transcript_text else None
+
+    # Public anonymous users are strictly PENDING; only Linguists or Admins can verify
+    is_verified = (current_user.role in ["Linguist", "Admin"]) if current_user else False
 
     audio_entry = AudioArchive(
         dialect_id=dialect_id,
@@ -108,19 +112,25 @@ async def upload_audio_recording(
         transcript_translation_standard=transcript_translation_standard,
         srt_subtitles=srt_content,
         submitted_by_id=current_user.id if current_user else None,
-        verification_status=VerificationStatus.VERIFIED if (current_user and current_user.role in ["Linguist", "Admin"]) else VerificationStatus.PENDING
+        verification_status=VerificationStatus.VERIFIED if is_verified else VerificationStatus.PENDING
     )
     db.add(audio_entry)
     db.commit()
     db.refresh(audio_entry)
 
-    # Broadcast websocket update
+    # Standardized WebSocket activity event broadcast
     await ws_manager.broadcast_activity({
-        "type": "NEW_AUDIO_RECORDING",
+        "event": "AUDIO_RECORDING_UPLOADED",
+        "type": "AUDIO_RECORDING_UPLOADED",
         "audio_id": audio_entry.id,
         "title": title,
-        "dialect_name": dialect.name,
-        "submitted_by": current_user.username if current_user else "Community Preserver"
+        "dialect_name": dialect.name if dialect else "Regional Marathi",
+        "submitted_by": current_user.username if current_user else "Community Preserver",
+        "data": {
+            "id": audio_entry.id,
+            "title": title,
+            "dialect": dialect.name if dialect else "Regional Marathi"
+        }
     })
 
     return audio_entry
@@ -142,13 +152,44 @@ def stream_audio(audio_id: int, db: Session = Depends(get_db)):
     if not audio:
         raise HTTPException(status_code=404, detail="Audio recording not found")
 
-    full_path = os.path.join(os.path.dirname(settings.UPLOAD_DIR), audio.audio_file_path)
-    if not os.path.exists(full_path):
-        # Fallback dummy audio file generator if file removed
-        dummy_content = b"ID3\x04\x00\x00\x00\x00\x00\x00Preserved Audio Sample"
-        return Response(content=dummy_content, media_type="audio/mpeg")
+    raw_path = audio.audio_file_path or ""
+    filename = os.path.basename(raw_path)
 
-    return FileResponse(full_path, media_type="audio/mpeg", filename=os.path.basename(full_path))
+    # Resolve actual file path on disk across supported storage layouts
+    candidate_paths = [
+        raw_path,
+        os.path.join(settings.AUDIO_UPLOAD_DIR, filename),
+        os.path.join(settings.UPLOAD_DIR, filename),
+        os.path.join(os.path.dirname(settings.UPLOAD_DIR), raw_path),
+        os.path.join(os.getcwd(), raw_path)
+    ]
+
+    resolved_path = None
+    for p in candidate_paths:
+        if p and os.path.isfile(p):
+            resolved_path = p
+            break
+
+    if not resolved_path:
+        # Strictly return HTTP 404 when file does not exist on disk
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Audio file '{filename}' does not exist on storage disk."
+        )
+
+    ext = os.path.splitext(resolved_path)[1].lower()
+    media_types = {
+        ".mp3": "audio/mpeg",
+        ".wav": "audio/wav",
+        ".ogg": "audio/ogg",
+        ".flac": "audio/flac",
+        ".webm": "audio/webm",
+        ".m4a": "audio/mp4",
+        ".aac": "audio/aac",
+    }
+    media_type = media_types.get(ext, "application/octet-stream")
+
+    return FileResponse(resolved_path, media_type=media_type, filename=filename)
 
 @router.get("/{audio_id}/subtitles.srt")
 def download_srt_subtitles(audio_id: int, db: Session = Depends(get_db)):

@@ -1,5 +1,5 @@
 import math
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, Request, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
@@ -15,6 +15,7 @@ from app.services.phonetic import (
     levenshtein_distance, devanagari_to_transliteration
 )
 from app.services.websocket_manager import ws_manager
+from app.services.rate_limiter import rate_limiter
 
 router = APIRouter(prefix="/lexicon", tags=["Lexicon & Dictionary Preserver"])
 
@@ -28,27 +29,28 @@ def list_lexicon_entries(
     verification_status: Optional[str] = Query(None, description="Pending, Verified, Rejected"),
     page: Optional[int] = Query(None, ge=1, description="Page number for pagination"),
     limit: Optional[int] = Query(None, ge=1, le=500, description="Items per page"),
-    skip: int = Query(0, ge=0, description="Items to skip"),
+    skip: int = 0,
     db: Session = Depends(get_db)
 ):
     query = db.query(LexiconEntry)
+
     if dialect_id:
         query = query.filter(LexiconEntry.dialect_id == dialect_id)
-    if semantic_category and semantic_category.lower() != "all":
-        query = query.filter(LexiconEntry.category.ilike(semantic_category))
-    if part_of_speech and part_of_speech.lower() != "all":
-        query = query.filter(LexiconEntry.part_of_speech == part_of_speech)
-    if verification_status and verification_status.lower() != "all":
-        query = query.filter(LexiconEntry.verification_status.ilike(verification_status))
+    if semantic_category:
+        query = query.filter(LexiconEntry.category.ilike(f"%{semantic_category}%"))
+    if part_of_speech:
+        query = query.filter(LexiconEntry.part_of_speech.ilike(f"%{part_of_speech}%"))
+    if verification_status:
+        query = query.filter(LexiconEntry.verification_status.ilike(f"%{verification_status}%"))
+
     if search:
-        search_pattern = f"%{search}%"
-        query = query.filter(
-            (LexiconEntry.word.ilike(search_pattern)) |
-            (LexiconEntry.transliteration.ilike(search_pattern)) |
-            (LexiconEntry.meaning.ilike(search_pattern)) |
-            (LexiconEntry.meaning_standard_lang.ilike(search_pattern)) |
-            (LexiconEntry.example_sentence.ilike(search_pattern))
+        search_filter = (
+            LexiconEntry.word.ilike(f"%{search}%") |
+            LexiconEntry.transliteration.ilike(f"%{search}%") |
+            LexiconEntry.meaning.ilike(f"%{search}%") |
+            LexiconEntry.meaning_standard_lang.ilike(f"%{search}%")
         )
+        query = query.filter(search_filter)
 
     total_count = query.count()
     response.headers["X-Total-Count"] = str(total_count)
@@ -67,9 +69,14 @@ def list_lexicon_entries(
 @router.post("/", response_model=LexiconResponse, status_code=status.HTTP_201_CREATED)
 async def create_lexicon_entry(
     entry_in: LexiconCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user)
 ):
+    # Public abuse protection: rate limit unauthenticated submissions
+    if not current_user:
+        rate_limiter.check(request, endpoint_key="lexicon_contribute")
+
     dialect = None
     if entry_in.dialect_id:
         dialect = db.query(Dialect).filter(Dialect.id == entry_in.dialect_id).first()
@@ -109,13 +116,21 @@ async def create_lexicon_entry(
     db.commit()
     db.refresh(entry)
 
-    # Broadcast websocket activity update
+    # Standardized WebSocket activity event broadcast
     await ws_manager.broadcast_activity({
+        "event": "NEW_LEXICON_ENTRY",
         "type": "NEW_LEXICON_ENTRY",
         "entry_id": entry.id,
         "term": entry.term,
+        "word": entry.word,
         "dialect_name": dialect.name if dialect else "Regional Marathi",
-        "submitted_by": username
+        "submitted_by": username,
+        "data": {
+            "id": entry.id,
+            "term": entry.term,
+            "meaning": entry.meaning,
+            "dialect": dialect.name if dialect else "Regional Marathi"
+        }
     })
 
     return entry
@@ -128,34 +143,31 @@ def get_lexicon_entry(entry_id: int, db: Session = Depends(get_db)):
     return entry
 
 @router.post("/ipa-generate")
-def generate_ipa_for_text(text: str = Query(..., description="Devanagari phrase or word to convert")):
-    """Generates real-time IPA representation for given regional script text."""
-    ipa = devanagari_to_ipa(text)
+def generate_ipa_for_term(term: str = Query(..., description="Devanagari regional term")):
+    """Converts a Devanagari text term into standard International Phonetic Alphabet (IPA)."""
+    ipa = devanagari_to_ipa(term)
+    soundex = generate_indic_soundex(term)
+    transliteration = devanagari_to_transliteration(term)
     return {
-        "input_text": text,
-        "ipa_transcription": ipa
+        "term": term,
+        "ipa": ipa,
+        "soundex_code": soundex,
+        "transliteration": transliteration
     }
 
 @router.post("/phonetic-search", response_model=List[LexiconResponse])
-def search_phonetically(
+def phonetic_lexicon_search(
     req: PhoneticSearchRequest,
     db: Session = Depends(get_db)
 ):
-    """Searches lexicon entries using phonetic distance matching (Soundex + Levenshtein)."""
-    target_code = generate_indic_soundex(req.query_term)
-    target_norm = devanagari_to_transliteration(req.query_term).lower()
-
-    query = db.query(LexiconEntry)
-    if req.dialect_id:
-        query = query.filter(LexiconEntry.dialect_id == req.dialect_id)
-
-    all_entries = query.all()
+    query_soundex = generate_indic_soundex(req.query_term)
+    all_entries = db.query(LexiconEntry).all()
     results = []
+
     for entry in all_entries:
-        entry_norm = devanagari_to_transliteration(entry.word or "").lower()
-        dist = levenshtein_distance(target_norm, entry_norm)
-        soundex_match = (entry.phonetic_code == target_code) or (generate_indic_soundex(entry.word) == target_code)
-        text_match = (req.query_term.lower() in (entry.word or "").lower()) or (req.query_term.lower() in (entry.meaning or "").lower())
+        dist = levenshtein_distance(req.query_term, entry.term)
+        soundex_match = (entry.phonetic_code == query_soundex)
+        text_match = (req.query_term.lower() in entry.term.lower()) or (req.query_term.lower() in entry.meaning.lower())
 
         if dist <= req.max_distance or soundex_match or text_match:
             rank = 0 if soundex_match else dist

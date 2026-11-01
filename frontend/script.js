@@ -1712,10 +1712,13 @@ function initWebSocketActivityStream() {
     activitySocket.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
-        if (msg.event === "NEW_LEXICON_ENTRY") {
-          showToast(`⚡ Live Activity: New entry "${msg.term}" contributed!`);
-        } else if (msg.event === "AUDIO_RECORDING_UPLOADED") {
-          showToast(`🎙️ Live Activity: New audio "${msg.title}" archived!`);
+        const eventType = msg.event || msg.type;
+        if (eventType === "NEW_LEXICON_ENTRY") {
+          const term = msg.term || msg.word || (msg.data && (msg.data.term || msg.data.word)) || "New word";
+          showToast(`⚡ Live Activity: New entry "${term}" contributed!`);
+        } else if (eventType === "AUDIO_RECORDING_UPLOADED" || eventType === "NEW_AUDIO_RECORDING") {
+          const title = msg.title || (msg.data && msg.data.title) || "Regional Audio";
+          showToast(`🎙️ Live Activity: New audio "${title}" archived!`);
         }
       } catch (e) {}
     };

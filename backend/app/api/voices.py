@@ -1,30 +1,31 @@
 import os
 import uuid
 import datetime
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from app.config import settings
-from app.database import get_db
-from app.models import VoiceRecording, Entry, Contributor
-from app.schemas.schemas import VoiceRecordingResponse
 
-router = APIRouter(tags=["Voice Notes & Audio Preservation"])
+from app.database import get_db
+from app.models.models import VoiceRecording, Entry
+from app.schemas.schemas import VoiceRecordingResponse
+from app.config import settings
+from app.services.audio_service import validate_audio_file
+from app.services.rate_limiter import rate_limiter
+from app.services.websocket_manager import ws_manager
+
+router = APIRouter(tags=["Voices & Fieldwork Audio"])
 
 @router.get("/voices", response_model=List[VoiceRecordingResponse])
-def list_voices(
-    entry_id: Optional[int] = None,
-    contributor_id: Optional[int] = None,
+def get_voices(
     variety: Optional[str] = None,
+    entry_id: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
     query = db.query(VoiceRecording)
-    if entry_id:
-        query = query.filter(VoiceRecording.entry_id == entry_id)
-    if contributor_id:
-        query = query.filter(VoiceRecording.contributor_id == contributor_id)
     if variety:
         query = query.filter(VoiceRecording.variety.ilike(f"%{variety}%"))
+    if entry_id:
+        query = query.filter(VoiceRecording.entry_id == entry_id)
     return query.all()
 
 @router.get("/voices/{voice_id}", response_model=VoiceRecordingResponse)
@@ -36,6 +37,7 @@ def get_voice(voice_id: int, db: Session = Depends(get_db)):
 
 @router.post("/voices", response_model=VoiceRecordingResponse, status_code=status.HTTP_201_CREATED)
 async def upload_voice(
+    request: Request,
     file: UploadFile = File(...),
     entry_id: Optional[int] = Form(None),
     contributor_id: Optional[int] = Form(None),
@@ -46,23 +48,19 @@ async def upload_voice(
     duration: float = Form(0.0),
     db: Session = Depends(get_db)
 ):
-    # Validate file extension
-    file_ext = os.path.splitext(file.filename or "")[1].lower()
-    if file_ext not in settings.ALLOWED_AUDIO_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid audio file type '{file_ext}'. Allowed formats: {', '.join(settings.ALLOWED_AUDIO_EXTENSIONS)}"
-        )
+    # Public abuse protection
+    rate_limiter.check(request, endpoint_key="voice_contribute")
 
-    # Read and validate file content & size
+    # Read content and validate extension, size, and genuine audio header magic bytes
+    file_ext = os.path.splitext(file.filename or "")[1].lower()
     content = await file.read()
-    if len(content) == 0:
-        raise HTTPException(status_code=400, detail="Uploaded audio file cannot be empty.")
-    if len(content) > settings.MAX_AUDIO_SIZE_BYTES:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Audio file exceeds maximum allowed limit of {settings.MAX_AUDIO_SIZE_BYTES // (1024 * 1024)}MB."
-        )
+
+    validate_audio_file(
+        content=content,
+        filename=file.filename or "recording.mp3",
+        max_size_bytes=settings.MAX_AUDIO_SIZE_BYTES,
+        allowed_extensions=settings.ALLOWED_AUDIO_EXTENSIONS
+    )
 
     # Ensure upload directory exists
     os.makedirs(settings.AUDIO_UPLOAD_DIR, exist_ok=True)
@@ -74,11 +72,12 @@ async def upload_voice(
         f.write(content)
 
     rel_audio_url = f"/uploads/audio/{unique_filename}"
+    display_title = transcript[:60] if transcript else f"{variety or 'Regional'} Voice Recording"
 
     recording = VoiceRecording(
         entry_id=entry_id,
         contributor_id=contributor_id,
-        title=transcript[:60] if transcript else f"{variety or 'Regional'} Voice Recording",
+        title=display_title,
         audio_file=rel_audio_url,
         duration=duration,
         language=language,
@@ -97,5 +96,20 @@ async def upload_voice(
         if entry and not entry.audio_url:
             entry.audio_url = rel_audio_url
             db.commit()
+
+    # Broadcast standardized WebSocket notification
+    await ws_manager.broadcast_activity({
+        "event": "AUDIO_RECORDING_UPLOADED",
+        "type": "AUDIO_RECORDING_UPLOADED",
+        "audio_id": recording.id,
+        "title": display_title,
+        "dialect_name": variety or "Regional Marathi",
+        "submitted_by": "Community Preserver",
+        "data": {
+            "id": recording.id,
+            "title": display_title,
+            "dialect": variety
+        }
+    })
 
     return recording

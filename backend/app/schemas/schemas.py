@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 from typing import Optional, List
 import datetime
 
@@ -7,12 +7,29 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
+    @field_validator("password")
+    @classmethod
+    def validate_password_length(cls, v: str) -> str:
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError("Password cannot exceed 72 bytes (bcrypt maximum limit).")
+        return v
+
 class UserCreate(BaseModel):
     username: str
     email: str
     password: str
     full_name: Optional[str] = None
     role: Optional[str] = "Contributor"
+
+    @field_validator("password")
+    @classmethod
+    def validate_password_length(cls, v: str) -> str:
+        byte_len = len(v.encode("utf-8"))
+        if byte_len > 72:
+            raise ValueError("Password cannot exceed 72 bytes (bcrypt maximum limit).")
+        if len(v) < 6:
+            raise ValueError("Password must be at least 6 characters.")
+        return v
 
 class UserRoleUpdate(BaseModel):
     role: str

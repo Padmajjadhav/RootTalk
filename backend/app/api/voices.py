@@ -4,14 +4,12 @@ import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from app.config import settings
 from app.database import get_db
 from app.models import VoiceRecording, Entry, Contributor
 from app.schemas.schemas import VoiceRecordingResponse
 
 router = APIRouter(tags=["Voice Notes & Audio Preservation"])
-
-UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "audio")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.get("/voices", response_model=List[VoiceRecordingResponse])
 def list_voices(
@@ -48,15 +46,31 @@ async def upload_voice(
     duration: float = Form(0.0),
     db: Session = Depends(get_db)
 ):
+    # Validate file extension
+    file_ext = os.path.splitext(file.filename or "")[1].lower()
+    if file_ext not in settings.ALLOWED_AUDIO_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid audio file type '{file_ext}'. Allowed formats: {', '.join(settings.ALLOWED_AUDIO_EXTENSIONS)}"
+        )
+
+    # Read and validate file content & size
+    content = await file.read()
+    if len(content) == 0:
+        raise HTTPException(status_code=400, detail="Uploaded audio file cannot be empty.")
+    if len(content) > settings.MAX_AUDIO_SIZE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Audio file exceeds maximum allowed limit of {settings.MAX_AUDIO_SIZE_BYTES // (1024 * 1024)}MB."
+        )
+
     # Ensure upload directory exists
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    os.makedirs(settings.AUDIO_UPLOAD_DIR, exist_ok=True)
     
-    file_ext = os.path.splitext(file.filename)[1] or ".wav"
     unique_filename = f"{uuid.uuid4().hex}{file_ext}"
-    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+    file_path = os.path.join(settings.AUDIO_UPLOAD_DIR, unique_filename)
 
     with open(file_path, "wb") as f:
-        content = await file.read()
         f.write(content)
 
     rel_audio_url = f"/uploads/audio/{unique_filename}"
@@ -64,6 +78,7 @@ async def upload_voice(
     recording = VoiceRecording(
         entry_id=entry_id,
         contributor_id=contributor_id,
+        title=transcript[:60] if transcript else f"{variety or 'Regional'} Voice Recording",
         audio_file=rel_audio_url,
         duration=duration,
         language=language,

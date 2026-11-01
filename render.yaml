@@ -4,13 +4,29 @@ services:
     name: roottalk-backend
     env: python
     rootDir: backend
-    buildCommand: pip install -r requirements.txt
-    startCommand: python run_server.py --host 0.0.0.0
+    buildCommand: pip install -r requirements.txt && python database/seed.py
+    startCommand: python run_server.py
+    disk:
+      name: roottalk-uploads
+      mountPath: /data/uploads
+      sizeGB: 1
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
+      - key: ENVIRONMENT
+        value: production
       - key: HOST
         value: 0.0.0.0
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: roottalk-postgres
+          property: connectionString
+      - key: UPLOAD_DIR
+        value: /data/uploads
+      - key: ALLOWED_ORIGINS
+        value: https://roottalk-frontend.onrender.com
 
   # 2. BhashaLok Frontend Static Web Service
   - type: web
@@ -18,3 +34,10 @@ services:
     env: static
     rootDir: frontend
     staticPublishPath: .
+
+# 3. Persistent PostgreSQL Database Service for Production
+databases:
+  - name: roottalk-postgres
+    databaseName: roottalk
+    user: roottalk_user
+    plan: free

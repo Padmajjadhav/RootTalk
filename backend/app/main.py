@@ -55,20 +55,19 @@ A high-performance, interactive backend engine for preserving endangered regiona
     lifespan=lifespan
 )
 
-# CORS Configuration
+# CORS Configuration with restricted origins in production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
 
-# Static Uploads directory
-UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+# Static Uploads directory (configured via settings.UPLOAD_DIR)
+os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 # Register API Routers (v1 prefix)
 app.include_router(auth.router, prefix=settings.API_V1_STR)

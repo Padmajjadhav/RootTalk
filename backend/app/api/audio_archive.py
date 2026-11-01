@@ -62,14 +62,26 @@ async def upload_audio_recording(
     if not dialect:
         raise HTTPException(status_code=404, detail="Dialect not found")
 
-    file_ext = os.path.splitext(file.filename)[1].lower()
-    if file_ext not in [".mp3", ".wav", ".m4a", ".ogg", ".flac"]:
-        file_ext = ".mp3"
+    file_ext = os.path.splitext(file.filename or "")[1].lower()
+    if file_ext not in settings.ALLOWED_AUDIO_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid audio file type '{file_ext}'. Allowed formats: {', '.join(settings.ALLOWED_AUDIO_EXTENSIONS)}"
+        )
 
+    contents = await file.read()
+    if len(contents) == 0:
+        raise HTTPException(status_code=400, detail="Uploaded audio file cannot be empty.")
+    if len(contents) > settings.MAX_AUDIO_SIZE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Audio file exceeds maximum allowed limit of {settings.MAX_AUDIO_SIZE_BYTES // (1024 * 1024)}MB."
+        )
+
+    os.makedirs(settings.AUDIO_UPLOAD_DIR, exist_ok=True)
     filename = f"audio_{uuid.uuid4().hex}{file_ext}"
     file_path = os.path.join(settings.AUDIO_UPLOAD_DIR, filename)
 
-    contents = await file.read()
     with open(file_path, "wb") as f:
         f.write(contents)
 
@@ -108,7 +120,7 @@ async def upload_audio_recording(
         "audio_id": audio_entry.id,
         "title": title,
         "dialect_name": dialect.name,
-        "submitted_by": current_user.username
+        "submitted_by": current_user.username if current_user else "Community Preserver"
     })
 
     return audio_entry

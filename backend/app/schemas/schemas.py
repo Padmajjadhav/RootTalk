@@ -14,6 +14,9 @@ class UserCreate(BaseModel):
     full_name: Optional[str] = None
     role: Optional[str] = "Contributor"
 
+class UserRoleUpdate(BaseModel):
+    role: str
+
 class UserResponse(BaseModel):
     id: int
     username: str
@@ -198,7 +201,7 @@ class AudioArchiveCreate(BaseModel):
 class AudioArchiveResponse(BaseModel):
     id: int
     dialect_id: Optional[int] = None
-    title: str
+    title: Optional[str] = "Preserved Voice Sample"
     genre: Optional[str] = "Culture"
     speaker_name: Optional[str] = None
     audio_file_path: str

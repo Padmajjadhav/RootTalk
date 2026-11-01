@@ -239,7 +239,6 @@ async function handleRegisterSubmit(e) {
   const full_name = document.getElementById("reg-fullname").value.trim();
   const email = document.getElementById("reg-email").value.trim();
   const password = document.getElementById("reg-password").value;
-  const role = document.getElementById("reg-role").value;
   const errorEl = document.getElementById("register-error-msg");
   errorEl.classList.add("hidden");
 
@@ -247,7 +246,7 @@ async function handleRegisterSubmit(e) {
     const res = await fetch(`${API_BASE}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, full_name, email, password, role })
+      body: JSON.stringify({ username, full_name, email, password })
     });
 
     if (res.ok) {
@@ -755,18 +754,47 @@ function triggerHeroSearch() {
 
 async function voteEntry(id, voteType, event) {
   if (event) event.stopPropagation();
+
+  // Validate authentication before voting
+  if (!authToken) {
+    showToast("Please log in to vote on vocabulary entries.");
+    openAuthModal();
+    return;
+  }
+
   try {
     const res = await fetch(`${API_BASE}/lexicon/${id}/vote?vote_type=${voteType}`, {
-      method: "POST"
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${authToken}`
+      }
     });
+
     if (res.ok) {
       const data = await res.json();
       const countEl = document.getElementById(`vote-count-${id}`);
       if (countEl) countEl.innerText = data.upvotes || 0;
-      showToast(voteType > 0 ? "Upvoted entry!" : "Downvoted entry.");
+
+      // Update in-memory entry cache
+      const item = lexiconData.find(x => x.id === id);
+      if (item) {
+        item.upvotes = data.upvotes;
+        item.downvotes = data.downvotes;
+      }
+      showToast(voteType > 0 ? "Upvote recorded successfully!" : "Downvote recorded successfully.");
+    } else if (res.status === 401) {
+      showToast("Session expired. Please log in again to vote.");
+      handleLogout();
+      openAuthModal();
+    } else if (res.status === 403) {
+      showToast("You do not have permission to vote on this entry.");
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showToast(err.detail || "Voting failed. Please try again.");
     }
   } catch (err) {
-    console.warn("Voting error:", err);
+    console.error("Voting network error:", err);
+    showToast("Network error submitting vote.");
   }
 }
 

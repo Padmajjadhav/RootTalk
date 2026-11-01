@@ -62,8 +62,9 @@ def validate_audio_file(
 
     if len(content) > max_size_bytes:
         max_mb = max_size_bytes // (1024 * 1024)
+        status_413 = getattr(status, "HTTP_413_CONTENT_TOO_LARGE", 413)
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status_413,
             detail=f"Audio file exceeds maximum allowed limit of {max_mb}MB."
         )
 

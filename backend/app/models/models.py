@@ -4,6 +4,10 @@ from sqlalchemy import Column, Integer, String, Text, Float, DateTime, ForeignKe
 from sqlalchemy.orm import relationship, synonym
 from app.database import Base
 
+def get_utc_now():
+    """Timezone-aware UTC timestamp generator preventing Python 3.12+ utcnow deprecation."""
+    return datetime.datetime.now(datetime.timezone.utc)
+
 class UserRole(str, enum.Enum):
     ADMIN = "Admin"
     LINGUIST = "Linguist"
@@ -39,7 +43,7 @@ class User(Base):
     district = Column(String(100), nullable=True)
     profile_image = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=get_utc_now)
 
 class LanguageVariety(Base):
     __tablename__ = "languages_varieties"
@@ -58,7 +62,7 @@ class LanguageVariety(Base):
     endangerment_status = Column(String(50), default="Vulnerable")
     estimated_speakers = Column(Integer, default=50000)
     cultural_notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=get_utc_now)
 
     entries = relationship("Entry", back_populates="dialect")
     audio_archives = relationship("VoiceRecording", back_populates="dialect")
@@ -82,7 +86,7 @@ class Contributor(Base):
     role = Column(String(100), nullable=True)
     bio = Column(Text, nullable=True)
     profile_image = Column(String(255), nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=get_utc_now)
 
     entries = relationship("Entry", back_populates="contributor")
     voice_recordings = relationship("VoiceRecording", back_populates="contributor")
@@ -118,8 +122,8 @@ class Entry(Base):
     verification_status = Column(String(50), default="Verified")
     upvotes = Column(Integer, default=0)
     downvotes = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
     dialect = relationship("LanguageVariety", back_populates="entries")
     contributor = relationship("Contributor", back_populates="entries")
@@ -160,7 +164,7 @@ class VoiceRecording(Base):
     srt_subtitles = Column(Text, nullable=True)
     verification_status = Column(String(50), default="Verified")
     views_count = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=get_utc_now)
 
     entry = relationship("Entry", back_populates="voice_recordings")
     contributor = relationship("Contributor", back_populates="voice_recordings")
@@ -180,7 +184,7 @@ class LexiconVote(Base):
     lexicon_id = Column(Integer, ForeignKey("entries.id"), nullable=False)
     vote = Column(Integer, nullable=False)
     comment = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=get_utc_now)
 
 class QuizDeck(Base):
     __tablename__ = "quiz_decks"
@@ -190,7 +194,7 @@ class QuizDeck(Base):
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
     difficulty = Column(String(50), default="Beginner")
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=get_utc_now)
 
     questions = relationship("QuizQuestion", back_populates="deck", cascade="all, delete-orphan")
 

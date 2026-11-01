@@ -122,6 +122,46 @@ def test_auth_admin_and_invalid_password(client):
     assert admin_res.json()["user"]["role"] == "Admin"
 
 
+def test_jwt_expired_and_invalid_tokens(client):
+    from datetime import timedelta
+    from app.services.auth_service import create_access_token
+
+    # 1. Malformed / invalid token must return 401 Unauthorized
+    invalid_headers = {"Authorization": "Bearer malformed.invalid.token"}
+    res_invalid = client.get("/api/v1/auth/me", headers=invalid_headers)
+    assert res_invalid.status_code == 401
+    assert "Could not validate credentials" in res_invalid.json()["detail"]
+
+    # 2. Expired JWT token (expired in the past) must return 401 Unauthorized
+    expired_token = create_access_token(
+        data={"sub": "dr_patil", "role": "Linguist"},
+        expires_delta=timedelta(seconds=-60)
+    )
+    expired_headers = {"Authorization": f"Bearer {expired_token}"}
+    res_expired = client.get("/api/v1/auth/me", headers=expired_headers)
+    assert res_expired.status_code == 401
+    assert "Could not validate credentials" in res_expired.json()["detail"]
+
+    # 3. Missing authorization header on protected route returns 401 Unauthorized
+    res_no_token = client.get("/api/v1/auth/me")
+    assert res_no_token.status_code == 401
+
+    # 4. Confirm sensitive password hash is never exposed in user responses
+    login_res = client.post("/api/v1/auth/login", json={
+        "username": "dr_patil",
+        "password": "Linguist123!"
+    })
+    assert login_res.status_code == 200
+    user_payload = login_res.json()["user"]
+    assert "hashed_password" not in user_payload
+    assert "password" not in user_payload
+
+    token = login_res.json()["access_token"]
+    me_payload = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"}).json()
+    assert "hashed_password" not in me_payload
+    assert "password" not in me_payload
+
+
 def test_role_escalation_prevention(client, test_env):
     # Public registration must always assign Contributor role; privilege self-selection ignored
     res1 = client.post("/api/v1/auth/register", json={
@@ -599,6 +639,18 @@ def test_categories_and_contributors_endpoints(client):
     contributors = cont_res.json()
     assert len(contributors) >= 3
     assert any(c["name"] == "Parth Kadam" for c in contributors)
+
+
+def test_todays_word_retrieval(client):
+    res = client.get("/api/v1/lexicon/?limit=20")
+    assert res.status_code == 200
+    entries = res.json()
+    assert len(entries) >= 20
+    sample = entries[0]
+    assert "term" in sample
+    assert "meaning_en" in sample
+    assert "dialect_id" in sample
+    assert "ipa_transcription" in sample
 
 
 def test_dev_database_isolation():

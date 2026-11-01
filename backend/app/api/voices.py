@@ -84,7 +84,7 @@ async def upload_voice(
         variety=variety,
         region=region,
         transcript=transcript,
-        created_at=datetime.datetime.utcnow()
+        created_at=datetime.datetime.now(datetime.timezone.utc)
     )
     db.add(recording)
     db.commit()

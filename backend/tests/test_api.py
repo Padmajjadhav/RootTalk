@@ -39,6 +39,22 @@ def test_auth_login_and_me(client):
     assert me_res.status_code == 200
     assert me_res.json()["username"] == "dr_patil"
 
+def test_auth_admin_and_invalid_password(client):
+    # Invalid password test
+    bad_res = client.post("/api/v1/auth/login", json={
+        "username": "admin",
+        "password": "wrong_password_xyz"
+    })
+    assert bad_res.status_code == 401
+
+    # Valid admin login
+    admin_res = client.post("/api/v1/auth/login", json={
+        "username": "admin",
+        "password": "Admin123!"
+    })
+    assert admin_res.status_code == 200
+    assert admin_res.json()["user"]["role"] == "Admin"
+
 def test_list_dialects(client):
     response = client.get("/api/v1/dialects/")
     assert response.status_code == 200
@@ -49,7 +65,6 @@ def test_list_dialects(client):
     assert malvani["preservation_score"] > 0
 
 def test_dialect_map_data(client):
-    # Fetch first dialect
     dialects_res = client.get("/api/v1/dialects/")
     d_id = dialects_res.json()[0]["id"]
     
@@ -70,14 +85,66 @@ def test_lexicon_and_ipa_generation(client):
     assert lex_res.status_code == 200
     assert len(lex_res.json()) >= 1
 
+def test_lexicon_pagination_headers(client):
+    res = client.get("/api/v1/lexicon/?page=1&limit=10")
+    assert res.status_code == 200
+    assert "X-Total-Count" in res.headers
+    assert "X-Total-Pages" in res.headers
+    assert "X-Current-Page" in res.headers
+    assert int(res.headers["X-Total-Count"]) >= 100
+    assert int(res.headers["X-Total-Pages"]) >= 10
+    assert res.headers["X-Current-Page"] == "1"
+    assert len(res.json()) == 10
+
 def test_phonetic_search(client):
-    res = client.post("/api/v1/lexicon/phonetic-search", json={
+    # Latin query
+    res_lat = client.post("/api/v1/lexicon/phonetic-search", json={
         "query_term": "khay",
         "max_distance": 3
     })
-    assert res.status_code == 200
-    results = res.json()
-    assert isinstance(results, list)
+    assert res_lat.status_code == 200
+    results_lat = res_lat.json()
+    assert isinstance(results_lat, list)
+
+    # Devanagari query
+    res_dev = client.post("/api/v1/lexicon/phonetic-search", json={
+        "query_term": "आंबा",
+        "max_distance": 3
+    })
+    assert res_dev.status_code == 200
+    results_dev = res_dev.json()
+    assert len(results_dev) >= 1
+    assert any("आंबा" in r["term"] for r in results_dev)
+
+def test_public_contribution_and_peer_verification(client):
+    # 1. Anonymous public word submission
+    post_res = client.post("/api/v1/lexicon/", json={
+        "dialect_id": 1,
+        "term": "गुपित",
+        "meaning_en": "Secret or hidden mystery",
+        "meaning_standard_lang": "गूढ / रहस्य",
+        "semantic_category": "Culture",
+        "part_of_speech": "Noun",
+        "example_sentence_dialect": "ह्या झाडाखाली एक गुपित दडलंय."
+    })
+    assert post_res.status_code == 201
+    entry = post_res.json()
+    assert entry["verification_status"] == "Pending"
+    entry_id = entry["id"]
+
+    # 2. Login as Admin
+    admin_login = client.post("/api/v1/auth/login", json={
+        "username": "admin",
+        "password": "Admin123!"
+    })
+    assert admin_login.status_code == 200
+    token = admin_login.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 3. Verify / Approve submission
+    verify_res = client.post(f"/api/v1/contributions/verify-lexicon/{entry_id}?approve=true", headers=headers)
+    assert verify_res.status_code == 200
+    assert verify_res.json()["verification_status"] == "Verified"
 
 def test_audio_archive_and_subtitles(client):
     audios_res = client.get("/api/v1/audio-archive/")
@@ -135,3 +202,18 @@ def test_analytics_and_export(client):
     csv_export = client.get("/api/v1/analytics/export/csv")
     assert csv_export.status_code == 200
     assert "Dialect Code" in csv_export.text
+
+def test_categories_and_contributors_endpoints(client):
+    # Test /api/categories
+    cat_res = client.get("/api/categories")
+    assert cat_res.status_code == 200
+    categories = cat_res.json()
+    assert len(categories) == 15
+    assert any(c["count"] > 0 for c in categories)
+
+    # Test /api/contributors
+    cont_res = client.get("/api/contributors")
+    assert cont_res.status_code == 200
+    contributors = cont_res.json()
+    assert len(contributors) >= 3
+    assert any(c["name"] == "Parth Kadam" for c in contributors)

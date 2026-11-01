@@ -154,3 +154,63 @@ body {
     opacity: 1;
   }
 }
+
+/* Interactive Dialect Map */
+#dialect-map {
+  height: 520px;
+  width: 100%;
+  border-radius: 1rem;
+  z-index: 1;
+}
+
+/* Recording Pulse Indicator */
+.pulse-record {
+  animation: pulse 1.2s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.6; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Quiz Option Selection */
+.quiz-option {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.quiz-option:hover {
+  border-color: #1b4d3e;
+  background-color: #f0fdf4;
+}
+.quiz-option.selected {
+  border-color: #1b4d3e;
+  background-color: #ecfdf5;
+  box-shadow: 0 0 0 2px rgba(27, 77, 62, 0.2);
+}
+
+/* Pagination Buttons */
+.page-btn {
+  padding: 0.4rem 0.85rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  color: #4a5568;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.15s ease;
+}
+.page-btn:hover:not(:disabled) {
+  border-color: #1b4d3e;
+  color: #1b4d3e;
+  background-color: #f0fdf4;
+}
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.page-btn.active {
+  background-color: #1b4d3e;
+  color: #ffffff;
+  border-color: #1b4d3e;
+}

@@ -9,13 +9,14 @@ class Settings:
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
     
-    # SQLite Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./preservation.db")
-    
     # Upload Storage
-    UPLOAD_DIR: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
+    UPLOAD_DIR: str = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
     AUDIO_UPLOAD_DIR: str = os.path.join(UPLOAD_DIR, "audio")
     TRANSCRIPTION_UPLOAD_DIR: str = os.path.join(UPLOAD_DIR, "transcriptions")
+
+    # SQLite Database
+    _DEFAULT_DB: str = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "preservation.db").replace("\\", "/")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite:///{_DEFAULT_DB}")
 
 settings = Settings()
 

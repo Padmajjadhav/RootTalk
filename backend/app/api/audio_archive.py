@@ -56,7 +56,7 @@ async def upload_audio_recording(
     transcript_translation_standard: Optional[str] = Form(None),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: Optional[User] = Depends(get_optional_user)
 ):
     dialect = db.query(Dialect).filter(Dialect.id == dialect_id).first()
     if not dialect:
@@ -95,8 +95,8 @@ async def upload_audio_recording(
         transcript_translation_en=transcript_translation_en,
         transcript_translation_standard=transcript_translation_standard,
         srt_subtitles=srt_content,
-        submitted_by_id=current_user.id,
-        verification_status=VerificationStatus.VERIFIED if current_user.role in ["Linguist", "Admin"] else VerificationStatus.PENDING
+        submitted_by_id=current_user.id if current_user else None,
+        verification_status=VerificationStatus.VERIFIED if (current_user and current_user.role in ["Linguist", "Admin"]) else VerificationStatus.PENDING
     )
     db.add(audio_entry)
     db.commit()

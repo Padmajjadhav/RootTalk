@@ -1,7 +1,7 @@
 import datetime
 import enum
 from sqlalchemy import Column, Integer, String, Text, Float, DateTime, ForeignKey, Boolean
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, synonym
 from app.database import Base
 
 class UserRole(str, enum.Enum):
@@ -125,53 +125,12 @@ class Entry(Base):
     contributor = relationship("Contributor", back_populates="entries")
     voice_recordings = relationship("VoiceRecording", back_populates="entry", cascade="all, delete-orphan")
 
-    @property
-    def term(self):
-        return self.word
-
-    @term.setter
-    def term(self, value):
-        self.word = value
-
-    @property
-    def script(self):
-        return self.transliteration or "Devanagari"
-
-    @script.setter
-    def script(self, value):
-        self.transliteration = value
-
-    @property
-    def meaning_en(self):
-        return self.meaning
-
-    @meaning_en.setter
-    def meaning_en(self, value):
-        self.meaning = value
-
-    @property
-    def semantic_category(self):
-        return self.category
-
-    @semantic_category.setter
-    def semantic_category(self, value):
-        self.category = value
-
-    @property
-    def example_sentence_dialect(self):
-        return self.example_sentence
-
-    @example_sentence_dialect.setter
-    def example_sentence_dialect(self, value):
-        self.example_sentence = value
-
-    @property
-    def audio_sample_url(self):
-        return self.audio_url
-
-    @audio_sample_url.setter
-    def audio_sample_url(self, value):
-        self.audio_url = value
+    term = synonym("word")
+    script = synonym("transliteration")
+    meaning_en = synonym("meaning")
+    semantic_category = synonym("category")
+    example_sentence_dialect = synonym("example_sentence")
+    audio_sample_url = synonym("audio_url")
 
 LexiconEntry = Entry
 
@@ -207,29 +166,9 @@ class VoiceRecording(Base):
     contributor = relationship("Contributor", back_populates="voice_recordings")
     dialect = relationship("LanguageVariety", back_populates="audio_archives")
 
-    @property
-    def audio_file_path(self):
-        return self.audio_file
-
-    @audio_file_path.setter
-    def audio_file_path(self, value):
-        self.audio_file = value
-
-    @property
-    def duration_seconds(self):
-        return self.duration
-
-    @duration_seconds.setter
-    def duration_seconds(self, value):
-        self.duration = value
-
-    @property
-    def transcript_text(self):
-        return self.transcript
-
-    @transcript_text.setter
-    def transcript_text(self, value):
-        self.transcript = value
+    audio_file_path = synonym("audio_file")
+    duration_seconds = synonym("duration")
+    transcript_text = synonym("transcript")
 
 AudioArchive = VoiceRecording
 

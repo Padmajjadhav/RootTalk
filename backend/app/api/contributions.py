@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.database import get_db
-from app.models import LexiconEntry, AudioArchive, User, UserRole, VerificationStatus
-from app.schemas.schemas import LexiconResponse, AudioArchiveResponse, UserResponse
+from app.models import LexiconEntry, Entry, User, UserRole, VerificationStatus
+from app.schemas.schemas import LexiconResponse, UserResponse
 from app.services.auth_service import get_current_user
 
 router = APIRouter(prefix="/contributions", tags=["Peer Verification & Gamification"])
@@ -28,29 +28,33 @@ def verify_lexicon_entry(
         raise HTTPException(status_code=403, detail="Only Linguists or Admins can verify submissions")
 
     entry = db.query(LexiconEntry).filter(LexiconEntry.id == entry_id).first()
-    if not entry:
+    alt_entry = db.query(Entry).filter(Entry.id == entry_id).first()
+    if not entry and not alt_entry:
         raise HTTPException(status_code=404, detail="Lexicon entry not found")
 
-    if approve:
-        entry.verification_status = VerificationStatus.VERIFIED
-        entry.verified_by_id = current_user.id
-        
-        # Award reputation points to contributor
-        if entry.submitted_by_id:
-            contributor = db.query(User).filter(User.id == entry.submitted_by_id).first()
-            if contributor:
-                contributor.reputation_points += 25
-                if contributor.reputation_points >= 100 and contributor.badge_title == "Linguistic Enthusiast":
-                    contributor.badge_title = "Dialect Champion"
-                elif contributor.reputation_points >= 300:
-                    contributor.badge_title = "Preservation Master"
-    else:
-        entry.verification_status = VerificationStatus.REJECTED
+    if entry:
+        if approve:
+            entry.verification_status = VerificationStatus.VERIFIED
+            entry.verified_by_id = current_user.id
+            if entry.submitted_by_id:
+                contributor = db.query(User).filter(User.id == entry.submitted_by_id).first()
+                if contributor:
+                    contributor.reputation_points += 25
+                    if contributor.reputation_points >= 100 and contributor.badge_title == "Linguistic Enthusiast":
+                        contributor.badge_title = "Dialect Champion"
+                    elif contributor.reputation_points >= 300:
+                        contributor.badge_title = "Preservation Master"
+        else:
+            entry.verification_status = VerificationStatus.REJECTED
+
+    if alt_entry:
+        alt_entry.status = "published" if approve else "rejected"
 
     db.commit()
+    final_status = entry.verification_status if entry else ("Verified" if approve else "Rejected")
     return {
         "entry_id": entry_id,
-        "verification_status": entry.verification_status,
+        "verification_status": final_status,
         "verified_by": current_user.username
     }
 

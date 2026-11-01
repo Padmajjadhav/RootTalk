@@ -88,6 +88,7 @@ class CategoryResponse(BaseModel):
     id: int
     name: str
     description: Optional[str] = None
+    count: Optional[int] = 0
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -277,3 +278,4 @@ class QuizResultResponse(BaseModel):
     correct_count: int
     score_percentage: float
     reputation_earned: int
+    feedback: Optional[str] = None

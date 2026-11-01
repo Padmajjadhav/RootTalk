@@ -91,6 +91,56 @@ def test_root_endpoint(client):
     assert "interactive_docs" in data
 
 
+def test_frontend_homepage_and_assets(client):
+    # 1. Browser requesting homepage receives HTML
+    browser_res = client.get("/", headers={"Accept": "text/html,application/xhtml+xml"})
+    assert browser_res.status_code == 200
+    assert "text/html" in browser_res.headers["content-type"]
+    assert "BhashaLok" in browser_res.text
+    assert "<!DOCTYPE html>" in browser_res.text
+
+    # 2. Direct index.html request
+    index_res = client.get("/index.html")
+    assert index_res.status_code == 200
+    assert "text/html" in index_res.headers["content-type"]
+
+    # 3. CSS stylesheets serve correctly
+    style_res = client.get("/style.css")
+    assert style_res.status_code == 200
+    assert "text/css" in style_res.headers["content-type"]
+
+    styles_sub_res = client.get("/styles/style.css")
+    assert styles_sub_res.status_code == 200
+    assert "text/css" in styles_sub_res.headers["content-type"]
+
+    # 4. JavaScript serves correctly
+    js_res = client.get("/script.js")
+    assert js_res.status_code == 200
+    assert "javascript" in js_res.headers["content-type"]
+    assert "API_BASE" in js_res.text
+
+    # 5. Static assets (images) serve correctly
+    asset_res = client.get("/assets/aaditya_jadhav.jpg")
+    assert asset_res.status_code == 200
+    assert "image" in asset_res.headers["content-type"]
+
+    # 6. Non-existent frontend file returns 404
+    missing_res = client.get("/nonexistent_static_file.xyz")
+    assert missing_res.status_code == 404
+
+    # 7. Non-existent API route returns 404 (not intercepted by static file handler)
+    api_404_res = client.get("/api/v1/nonexistent_api_endpoint")
+    assert api_404_res.status_code == 404
+
+    api_post_404 = client.post("/api/v1/nonexistent_api_endpoint")
+    assert api_post_404.status_code == 404
+
+    # 8. API status endpoint works
+    status_res = client.get("/api/v1")
+    assert status_res.status_code == 200
+    assert status_res.json()["status"] == "online"
+
+
 def test_auth_login_and_me(client):
     login_res = client.post("/api/v1/auth/login", json={
         "username": "dr_patil",

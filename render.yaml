@@ -1,7 +1,7 @@
 services:
-  # 1. FastAPI Backend Web Service
+  # 1. Unified RootTalk Web Service (FastAPI + Frontend)
   - type: web
-    name: roottalk-backend
+    name: roottalk
     env: python
     rootDir: backend
     buildCommand: pip install -r requirements.txt && python database/seed.py
@@ -26,16 +26,9 @@ services:
       - key: UPLOAD_DIR
         value: /data/uploads
       - key: ALLOWED_ORIGINS
-        value: https://roottalk-frontend.onrender.com
+        value: https://roottalk.onrender.com
 
-  # 2. BhashaLok Frontend Static Web Service
-  - type: web
-    name: roottalk-frontend
-    env: static
-    rootDir: frontend
-    staticPublishPath: .
-
-# 3. Persistent PostgreSQL Database Service for Production
+# 2. Persistent PostgreSQL Database Service for Production
 databases:
   - name: roottalk-postgres
     databaseName: roottalk

@@ -52,7 +52,7 @@ class Settings:
         if raw_origins:
             self.ALLOWED_ORIGINS: list = [o.strip() for o in raw_origins.split(",") if o.strip()]
         elif self.ENVIRONMENT == "production":
-            self.ALLOWED_ORIGINS: list = ["https://roottalk-frontend.onrender.com"]
+            self.ALLOWED_ORIGINS: list = ["https://roottalk.onrender.com"]
         else:
             self.ALLOWED_ORIGINS: list = [
                 "http://localhost:3000",
@@ -61,7 +61,7 @@ class Settings:
                 "http://127.0.0.1:8000",
                 "http://localhost:5500",
                 "http://127.0.0.1:5500",
-                "https://roottalk-frontend.onrender.com"
+                "https://roottalk.onrender.com"
             ]
 
 settings = Settings()

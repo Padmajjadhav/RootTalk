@@ -3,13 +3,9 @@
    Frontend JavaScript Engine (Vanilla JS + Live FastAPI Integration)
    ============================================================================== */
 
-// 1. Dynamic API Base Configuration (Localhost / Production on Render)
-const API_BASE = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-  ? (window.location.port === "8000" ? "/api/v1" : "http://127.0.0.1:8000/api/v1")
-  : (window.ROOTTALK_API_URL || "https://roottalk-backend.onrender.com/api/v1");
-
-// Helper for root API (for direct /api/categories, /api/contributors, /api/voices)
-const ROOT_API = API_BASE.endsWith("/api/v1") ? API_BASE.slice(0, -3) : API_BASE;
+// 1. Same-Origin Relative API Base Configuration (Unified Single-Service)
+const API_BASE = "/api/v1";
+const ROOT_API = "/api";
 
 // Global Application State
 let currentSection = "home";
@@ -808,7 +804,9 @@ function playSampleAudio(audioUrl, textToSpeak = "मायाळू") {
     if (activeAudio) {
       activeAudio.pause();
     }
-    const fullAudioUrl = audioUrl.startsWith("http") ? audioUrl : `${ROOT_API}${audioUrl.startsWith('/') ? '' : '/'}${audioUrl}`;
+    const fullAudioUrl = audioUrl.startsWith("http")
+      ? audioUrl
+      : (audioUrl.startsWith("/") ? audioUrl : `/${audioUrl}`);
     activeAudio = new Audio(fullAudioUrl);
     activeAudio.play().then(() => {
       showToast(`🔊 Playing Audio: "${textToSpeak}"`);
@@ -1702,8 +1700,8 @@ function exportArchiveJSON() {
 // 19. REAL-TIME WEBSOCKET LIVE ACTIVITY FEED
 // ==============================================================================
 function initWebSocketActivityStream() {
-  const wsProtocol = API_BASE.startsWith("https") ? "wss:" : "ws:";
-  const wsHost = API_BASE.replace(/^https?:\/\//, '').replace(/\/api\/v1$/, '');
+  const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const wsHost = window.location.host;
   const wsUrl = `${wsProtocol}//${wsHost}/api/v1/ws/activity`;
 
   try {

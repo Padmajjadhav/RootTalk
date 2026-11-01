@@ -1,34 +1,38 @@
+
 services:
-  # 1. Unified RootTalk Web Service (FastAPI + Frontend)
   - type: web
     name: roottalk
     env: python
+    plan: free
     rootDir: backend
+
     buildCommand: pip install -r requirements.txt && python database/seed.py
     startCommand: python run_server.py
-    disk:
-      name: roottalk-uploads
-      mountPath: /data/uploads
-      sizeGB: 1
+
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
+
       - key: ENVIRONMENT
         value: production
+
       - key: HOST
         value: 0.0.0.0
+
       - key: SECRET_KEY
         generateValue: true
+
       - key: DATABASE_URL
         fromDatabase:
           name: roottalk-postgres
           property: connectionString
+
       - key: UPLOAD_DIR
-        value: /data/uploads
+        value: uploads
+
       - key: ALLOWED_ORIGINS
         value: https://roottalk.onrender.com
 
-# 2. Persistent PostgreSQL Database Service for Production
 databases:
   - name: roottalk-postgres
     databaseName: roottalk

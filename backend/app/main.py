@@ -122,7 +122,8 @@ def serve_root_script():
     if os.path.isfile(script_path):
         return FileResponse(script_path, media_type="application/javascript")
     raise HTTPException(status_code=404, detail="script.js not found")
-
+    
+@app.get("/", include_in_schema=False)
 @app.get("/index.html", include_in_schema=False)
 def serve_index_html():
     index_path = os.path.join(FRONTEND_DIR, "index.html")

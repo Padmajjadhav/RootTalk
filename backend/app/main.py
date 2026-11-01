@@ -123,7 +123,6 @@ def serve_root_script():
         return FileResponse(script_path, media_type="application/javascript")
     raise HTTPException(status_code=404, detail="script.js not found")
     
-@app.get("/", include_in_schema=False)
 @app.get("/index.html", include_in_schema=False)
 def serve_index_html():
     index_path = os.path.join(FRONTEND_DIR, "index.html")
@@ -155,7 +154,7 @@ def root(request: Request):
     format_param = request.query_params.get("format", "")
 
     # Programmatic API consumer requested JSON metadata
-    if format_param == "json" or ("application/json" in accept and "text/html" not in accept) or accept == "*/*":
+    if format_param == "json" or ("application/json" in accept and "text/html" not in accept) or accept in ("*/*", ""):
         return {
             "status": "online",
             "system": settings.PROJECT_NAME,

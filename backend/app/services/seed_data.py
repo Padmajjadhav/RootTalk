@@ -43,10 +43,7 @@ VARIETIES = [
 TEAM_CONTRIBUTORS = [
     ("Aaditya Jadhav", "Mumbai", "Mumbai Suburban", "Project Lead & Dialect Preserver", "Student preserver documenting Marathi regional dialects.", "assets/aaditya_jadhav.jpg"),
     ("Padmaj Jadhav", "Mumbai", "Mumbai City", "Linguistics Researcher", "Student researcher compiling Marathi folklore and vocabulary archive.", "assets/padmaj_jadhav.jpg"),
-    ("Parth Kadam", "Mumbai", "Thane", "Technical Developer", "Student developer building BhashaLok digital repository APIs.", "assets/parth_kadam.jpg"),
-    ("Dr. Rajesh Patil", "Pune", "Pune", "Senior Dialectologist", "Professor of Indic Linguistics and Marathi oral heritage auditor.", "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop"),
-    ("Sushila Tai", "Malvan", "Sindhudurg", "Native Speaker & Oral Folk Artist", "Coastal Konkan native storyteller and Dashavatara preserver.", "https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop"),
-    ("Ganpat Kaka", "Warud", "Amravati", "Farmer & Vidarbha Oral Historian", "Elder native speaker documenting traditional Vidarbha agricultural lore.", "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=200&auto=format&fit=crop")
+    ("Parth Kadam", "Mumbai", "Thane", "Technical Developer", "Student developer building BhashaLok digital repository APIs.", "assets/parth_kadam.jpg")
 ]
 
 DEMO_ENTRIES_DATA = {
@@ -407,10 +404,28 @@ def seed_database(db: Session):
             db.refresh(d)
         dialect_map[name] = d
 
-    # 4. Seed Contributors
+    # 4. Seed Contributors (Only the 3 core creators)
+    allowed_contributor_names = [name for name, _, _, _, _, _ in TEAM_CONTRIBUTORS]
+    # Safely reassign foreign keys from any unwanted contributors before deletion
+    lead_contrib = db.query(Contributor).filter(Contributor.name == "Aaditya Jadhav").first()
+    lead_id = lead_contrib.id if lead_contrib else 1
+    unwanted_contribs = db.query(Contributor).filter(~Contributor.name.in_(allowed_contributor_names)).all()
+    if unwanted_contribs:
+        unwanted_ids = [u.id for u in unwanted_contribs]
+        db.query(Entry).filter(Entry.contributor_id.in_(unwanted_ids)).update({Entry.contributor_id: lead_id}, synchronize_session=False)
+        db.query(VoiceRecording).filter(VoiceRecording.contributor_id.in_(unwanted_ids)).update({VoiceRecording.contributor_id: lead_id}, synchronize_session=False)
+        db.query(AudioArchive).filter(AudioArchive.contributor_id.in_(unwanted_ids)).update({AudioArchive.contributor_id: lead_id}, synchronize_session=False)
+        for u in unwanted_contribs:
+            db.delete(u)
+        db.commit()
+
     for name, loc, dist, role, bio, img in TEAM_CONTRIBUTORS:
         if not db.query(Contributor).filter(Contributor.name == name).first():
             db.add(Contributor(name=name, location=loc, district=dist, role=role, bio=bio, profile_image=img))
+    db.commit()
+
+    # Remove non-Marathi leftover dialect if present
+    db.query(Dialect).filter(Dialect.code == "hin-awa").delete(synchronize_session=False)
     db.commit()
 
     default_contributor = db.query(Contributor).first()
@@ -471,6 +486,18 @@ def seed_database(db: Session):
     }
     for w, tr in trans_updates.items():
         db.query(Entry).filter(Entry.word == w, Entry.transliteration == "Devanagari").update({Entry.transliteration: tr}, synchronize_session=False)
+
+    dialect_varieties = {
+        "ख़य चाललोस?": ("Malvani", 1),
+        "चेडू": ("Malvani", 1),
+        "येवा कोंकण आपलोच असा!": ("Malvani", 1),
+        "येवा कोंकण आपलोच आसा!": ("Malvani", 1),
+        "कसं काय भाऊ?": ("Varhadi", 2),
+        "कशास तुले?": ("Ahirani", 3)
+    }
+    for w, (var, did) in dialect_varieties.items():
+        db.query(Entry).filter(Entry.word == w).update({Entry.variety: var, Entry.dialect_id: did}, synchronize_session=False)
+    db.query(Entry).filter(Entry.id == 3).update({Entry.transliteration: "Yeva Konkan aploch asa!", Entry.variety: "Malvani", Entry.dialect_id: 1}, synchronize_session=False)
     db.commit()
 
     # 6. Seed Fieldwork Audio Recordings

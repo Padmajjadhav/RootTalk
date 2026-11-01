@@ -1046,6 +1046,12 @@ function renderContributors(contributors) {
   const grid = document.getElementById("contributors-grid");
   if (!grid) return;
 
+  const count = (contributors && contributors.length) || 3;
+  const statEl = document.getElementById("stat-contributors");
+  if (statEl) statEl.innerText = count.toLocaleString();
+  const adminStatEl = document.getElementById("admin-contributors-count");
+  if (adminStatEl) adminStatEl.innerText = count;
+
   grid.innerHTML = "";
   contributors.forEach(c => {
     const card = document.createElement("div");
@@ -1636,6 +1642,25 @@ function updateMapMarkers(dialects) {
   mapMarkers.forEach(m => leafletMap.removeLayer(m));
   mapMarkers = [];
 
+  // Populate quick dialect selection chips
+  const chipsContainer = document.getElementById("map-dialect-chips");
+  if (chipsContainer) {
+    chipsContainer.innerHTML = "";
+    dialects.forEach(d => {
+      const btn = document.createElement("button");
+      btn.dataset.dialectId = d.id;
+      btn.innerText = d.name;
+      btn.className = "px-3 py-1 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 transition";
+      btn.onclick = () => {
+        showDialectDetailsOnMap(d);
+        if (d.latitude && d.longitude && leafletMap) {
+          leafletMap.flyTo([d.latitude, d.longitude], 8, { duration: 0.6 });
+        }
+      };
+      chipsContainer.appendChild(btn);
+    });
+  }
+
   dialects.forEach(d => {
     if (d.latitude && d.longitude) {
       const color = d.endangerment_status === "Safe" ? "#16a34a" :
@@ -1650,12 +1675,17 @@ function updateMapMarkers(dialects) {
         fillOpacity: 0.85
       }).addTo(leafletMap);
 
+      const wordsCount = d.lexicon_count || 0;
       const popupHtml = `
-        <div class="text-left font-sans p-1">
+        <div class="text-left font-sans p-1 min-w-[160px]">
           <div class="font-bold text-sm text-slate-900">${d.name}</div>
           <div class="text-xs text-slate-500">${d.region_name || 'Maharashtra'}</div>
-          <div class="mt-1"><span class="text-[10px] font-semibold px-2 py-0.5 rounded-full" style="background-color: ${color}20; color: ${color}">${d.endangerment_status}</span></div>
+          <div class="mt-1 flex items-center gap-1.5">
+            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full" style="background-color: ${color}20; color: ${color}">${d.endangerment_status}</span>
+            <span class="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">${wordsCount} words</span>
+          </div>
           <div class="text-[11px] text-slate-600 mt-2">Speakers: ${d.estimated_speakers ? d.estimated_speakers.toLocaleString() : 'N/A'}</div>
+          <button onclick="showDialectDetailsOnMapById(${d.id})" class="mt-2.5 text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-1 rounded-lg w-full text-center transition">Browse Words &rarr;</button>
         </div>
       `;
 
@@ -1674,30 +1704,149 @@ function updateMapMarkers(dialects) {
   }
 }
 
+function showDialectDetailsOnMapById(dialectId) {
+  const d = allDialects.find(item => item.id === dialectId);
+  if (d) {
+    showDialectDetailsOnMap(d);
+    if (d.latitude && d.longitude && leafletMap) {
+      leafletMap.flyTo([d.latitude, d.longitude], 8, { duration: 0.6 });
+    }
+  }
+}
+
 function showDialectDetailsOnMap(dialect) {
+  if (!dialect) return;
   activeMapDialect = dialect;
-  document.getElementById("map-detail-title").innerText = dialect.name;
-  document.getElementById("map-detail-region").innerText = dialect.region_name || dialect.region || "Maharashtra";
-  document.getElementById("map-detail-districts").innerText = dialect.districts || "Coastal & Central Maharashtra";
-  document.getElementById("map-detail-speakers").innerText = dialect.estimated_speakers ? `~${dialect.estimated_speakers.toLocaleString()} speakers` : "Under Field Assessment";
-  document.getElementById("map-detail-desc").innerText = dialect.description || dialect.cultural_notes || "Spoken by native community elders and heritage culture bearers.";
+
+  const titleEl = document.getElementById("map-detail-title");
+  if (titleEl) titleEl.innerText = dialect.name;
+
+  const regionEl = document.getElementById("map-detail-region");
+  if (regionEl) regionEl.innerText = dialect.region_name || dialect.region || "Maharashtra";
+
+  const distEl = document.getElementById("map-detail-districts");
+  if (distEl) distEl.innerText = dialect.districts || "Coastal & Central Maharashtra";
+
+  const spkEl = document.getElementById("map-detail-speakers");
+  if (spkEl) spkEl.innerText = dialect.estimated_speakers ? `~${dialect.estimated_speakers.toLocaleString()} speakers` : "Under Field Assessment";
+
+  const descEl = document.getElementById("map-detail-desc");
+  if (descEl) descEl.innerText = dialect.description || dialect.cultural_notes || "Spoken by native community elders and heritage culture bearers.";
 
   const badge = document.getElementById("map-detail-badge");
-  badge.innerText = dialect.endangerment_status || "Vulnerable";
-  badge.className = `px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-    dialect.endangerment_status === "Safe" ? "bg-emerald-100 text-emerald-800" :
-    dialect.endangerment_status === "Vulnerable" ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-800"
-  }`;
+  if (badge) {
+    badge.innerText = dialect.endangerment_status || "Vulnerable";
+    badge.className = `px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+      dialect.endangerment_status === "Safe" ? "bg-emerald-100 text-emerald-800" :
+      dialect.endangerment_status === "Vulnerable" ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-800"
+    }`;
+  }
+
+  // Update active chip highlight
+  document.querySelectorAll("#map-dialect-chips button").forEach(chip => {
+    if (chip.dataset.dialectId == dialect.id) {
+      chip.className = "px-3 py-1 rounded-lg text-xs font-bold bg-emerald-800 text-white shadow-sm transition";
+    } else {
+      chip.className = "px-3 py-1 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 transition";
+    }
+  });
+
+  // Fetch and display regional words for the selected dialect
+  fetchDialectMapWords(dialect.id);
+}
+
+async function fetchDialectMapWords(dialectId) {
+  const container = document.getElementById("map-dialect-words-container");
+  const countSpan = document.getElementById("map-words-count");
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="text-center py-6 text-slate-400 text-xs">
+      <i class="fa-solid fa-spinner fa-spin text-base text-emerald-700 mb-1.5 block"></i>
+      Loading words for this dialect...
+    </div>
+  `;
+
+  try {
+    const res = await fetch(`${API_BASE}/dialects/${dialectId}/words`);
+    if (res.ok) {
+      const words = await res.json();
+      if (countSpan) countSpan.innerText = words.length;
+
+      if (!words || words.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-6 text-slate-400 text-xs">
+            <i class="fa-solid fa-folder-open text-2xl text-slate-300 mb-1.5 block"></i>
+            No vocabulary entries recorded yet for this dialect.
+          </div>
+        `;
+        return;
+      }
+
+      let html = "";
+      words.forEach(w => {
+        const audioUrl = w.audio_sample_url || "";
+        const escapedTerm = (w.term || "").replace(/'/g, "\\'");
+        const category = w.semantic_category || w.category || "General";
+        const ipaOrTrans = w.ipa_transcription || w.script || "";
+        const audioBtn = audioUrl ? `
+          <button onclick="event.stopPropagation(); playSampleAudio('${audioUrl}', '${escapedTerm}')" class="w-6 h-6 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 flex items-center justify-center text-[10px] transition" title="Listen Pronunciation">
+            <i class="fa-solid fa-volume-high"></i>
+          </button>
+        ` : '';
+
+        html += `
+          <div onclick="openWordDetailModal(${w.id})" class="p-2.5 bg-slate-50 hover:bg-emerald-50/70 rounded-xl border border-slate-100 hover:border-emerald-200 cursor-pointer transition flex items-center justify-between group">
+            <div class="flex-1 min-w-0 pr-2">
+              <div class="flex items-center gap-1.5 mb-0.5">
+                <span class="text-sm font-extrabold text-slate-900 group-hover:text-emerald-800">${w.term}</span>
+                <span class="text-[9px] font-semibold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded-full border border-emerald-100">${category}</span>
+              </div>
+              <div class="text-[10px] text-emerald-700 font-mono truncate">${ipaOrTrans}</div>
+              <div class="text-xs text-slate-600 truncate mt-0.5">${w.meaning_en || ''}</div>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              ${audioBtn}
+              <i class="fa-solid fa-chevron-right text-slate-300 group-hover:text-emerald-700 text-[10px]"></i>
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    } else {
+      container.innerHTML = `
+        <div class="text-center py-6 text-slate-400 text-xs">
+          <i class="fa-solid fa-triangle-exclamation text-amber-500 text-base mb-1 block"></i>
+          Failed to load dialect vocabulary.
+        </div>
+      `;
+    }
+  } catch (err) {
+    console.error("Error fetching dialect words:", err);
+    container.innerHTML = `
+      <div class="text-center py-6 text-slate-400 text-xs">
+        <i class="fa-solid fa-triangle-exclamation text-amber-500 text-base mb-1 block"></i>
+        Failed to load dialect vocabulary.
+      </div>
+    `;
+  }
 }
 
 function filterBySelectedMapDialect() {
   if (!activeMapDialect) return;
+
+  // Reset category to All so that all dialect words are shown in dictionary
+  currentCategory = "All";
+  document.querySelectorAll("#category-pills-container .filter-tag").forEach(tag => tag.classList.remove("active"));
+  const catAllBtn = document.getElementById("cat-All");
+  if (catAllBtn) catAllBtn.classList.add("active");
+
   showSection('explore');
   const dialectSelect = document.getElementById("dialect-filter");
   if (dialectSelect) {
     dialectSelect.value = activeMapDialect.id;
-    filterLexiconEntries();
   }
+  fetchLexiconEntries(1);
 }
 
 

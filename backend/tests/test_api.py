@@ -541,13 +541,25 @@ def test_list_dialects(client):
 
 def test_dialect_map_data(client):
     dialects_res = client.get("/api/v1/dialects/")
-    d_id = dialects_res.json()[0]["id"]
+    dialects = dialects_res.json()
+    assert len(dialects) == 7
+    d_id = dialects[0]["id"]
     
     map_res = client.get(f"/api/v1/dialects/{d_id}/map-data")
     assert map_res.status_code == 200
     map_data = map_res.json()
     assert "coordinates" in map_data
     assert map_data["coordinates"]["latitude"] is not None
+    assert "words_count" in map_data
+    assert map_data["words_count"] > 0
+    assert "sample_words" in map_data
+
+    # Test the dedicated dialect-specific words browsing endpoint
+    words_res = client.get(f"/api/v1/dialects/{d_id}/words?limit=500")
+    assert words_res.status_code == 200
+    words = words_res.json()
+    assert len(words) == map_data["words_count"]
+    assert all(w["dialect_id"] == d_id for w in words)
 
 
 def test_lexicon_and_ipa_generation(client):
@@ -682,13 +694,15 @@ def test_categories_and_contributors_endpoints(client):
     assert cat_res.status_code == 200
     categories = cat_res.json()
     assert len(categories) == 15
-    assert any(c["count"] > 0 for c in categories)
+    assert sum(c["count"] for c in categories) >= 155
 
     cont_res = client.get("/api/contributors")
     assert cont_res.status_code == 200
     contributors = cont_res.json()
-    assert len(contributors) >= 3
-    assert any(c["name"] == "Parth Kadam" for c in contributors)
+    # Exactly the 3 intended creators: Padmaj, Parth, Aaditya
+    assert len(contributors) == 3
+    names = {c["name"] for c in contributors}
+    assert names == {"Aaditya Jadhav", "Padmaj Jadhav", "Parth Kadam"}
 
 
 def test_todays_word_retrieval(client):

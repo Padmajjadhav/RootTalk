@@ -142,7 +142,7 @@
             <div class="text-sm font-medium text-slate-500 mt-1">Audio Recordings</div>
           </div>
           <div class="p-4 border-r border-slate-100 last:border-0">
-            <div id="stat-contributors" class="text-3xl font-extrabold text-emerald-900">6</div>
+            <div id="stat-contributors" class="text-3xl font-extrabold text-emerald-900">3</div>
             <div class="text-sm font-medium text-slate-500 mt-1">Active Contributors</div>
           </div>
           <div class="p-4">
@@ -414,8 +414,8 @@
       </div>
 
       <div class="grid lg:grid-cols-12 gap-8 items-start">
-        <!-- Leaflet Map Container -->
-        <div class="lg:col-span-8 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <!-- Leaflet Map Container (Column 1) -->
+        <div class="lg:col-span-7 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
           <div id="dialect-map"></div>
           <div class="mt-3 flex flex-wrap items-center justify-between text-xs text-slate-500 px-2">
             <div class="flex items-center gap-4">
@@ -425,37 +425,70 @@
             </div>
             <span>Click any marker to inspect dialect</span>
           </div>
+
+          <!-- Quick Dialect Selection Buttons -->
+          <div class="mt-4 pt-3 border-t border-slate-100">
+            <span class="text-xs font-bold uppercase text-slate-400 block mb-2">Select Dialect Location:</span>
+            <div id="map-dialect-chips" class="flex flex-wrap gap-2">
+              <!-- Dynamically populated dialect chips -->
+            </div>
+          </div>
         </div>
 
-        <!-- Selected Dialect Information Card -->
-        <div class="lg:col-span-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm" id="dialect-detail-card">
-          <span class="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-1 block">Dialect Profile</span>
-          <h2 id="map-detail-title" class="text-2xl font-extrabold text-slate-900 mb-2">Malvani (कोकणी-मालवणी)</h2>
-          <div class="flex items-center gap-2 mb-4">
-            <span id="map-detail-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">Vulnerable</span>
-            <span id="map-detail-region" class="text-xs font-medium text-slate-500">Konkan Coast</span>
-          </div>
+        <!-- Selected Dialect Profile & Associated Regional Vocabulary (Column 2) -->
+        <div class="lg:col-span-5 flex flex-col gap-5">
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm" id="dialect-detail-card">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold uppercase tracking-wider text-emerald-800">Dialect Profile</span>
+              <span id="map-detail-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">Vulnerable</span>
+            </div>
+            <h2 id="map-detail-title" class="text-2xl font-extrabold text-slate-900 mb-0.5">Malvani</h2>
+            <div class="text-xs font-medium text-slate-500 mb-3" id="map-detail-region">Konkan Coast</div>
 
-          <div class="space-y-3.5 text-xs text-slate-700 mb-6">
-            <div class="p-3 bg-slate-50 rounded-xl">
-              <span class="font-bold text-slate-400 uppercase block mb-0.5">Districts & Coverage</span>
-              <span id="map-detail-districts" class="font-semibold text-slate-800">Sindhudurg, Ratnagiri, South Goa</span>
+            <div class="grid grid-cols-2 gap-2 text-xs mb-3">
+              <div class="p-2.5 bg-slate-50 rounded-xl">
+                <span class="font-bold text-slate-400 uppercase text-[10px] block mb-0.5">Coverage</span>
+                <span id="map-detail-districts" class="font-semibold text-slate-800 line-clamp-2">Sindhudurg, Ratnagiri</span>
+              </div>
+              <div class="p-2.5 bg-slate-50 rounded-xl">
+                <span class="font-bold text-slate-400 uppercase text-[10px] block mb-0.5">Speakers</span>
+                <span id="map-detail-speakers" class="font-semibold text-slate-800">~1,800,000</span>
+              </div>
             </div>
-            <div class="p-3 bg-slate-50 rounded-xl">
-              <span class="font-bold text-slate-400 uppercase block mb-0.5">Estimated Speakers</span>
-              <span id="map-detail-speakers" class="font-semibold text-slate-800">~1,500,000</span>
-            </div>
-            <div class="p-3 bg-slate-50 rounded-xl">
-              <span class="font-bold text-slate-400 uppercase block mb-0.5">Cultural Background</span>
-              <p id="map-detail-desc" class="text-slate-600 leading-relaxed">
-                Spoken predominantly in coastal southern Maharashtra and northern Goa. Famous for Dashavatara folk theatre, coastal idioms, and agrarian folklore.
+
+            <div class="p-2.5 bg-slate-50 rounded-xl text-xs mb-4">
+              <span class="font-bold text-slate-400 uppercase text-[10px] block mb-0.5">Cultural Background</span>
+              <p id="map-detail-desc" class="text-slate-600 leading-relaxed text-xs line-clamp-2">
+                Preserves Dashavatara folk theatre scripts, maritime folk songs, and coastal vocabulary.
               </p>
             </div>
-          </div>
 
-          <button id="map-explore-btn" onclick="filterBySelectedMapDialect()" class="btn-primary w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-sm">
-            <i class="fa-solid fa-book-open"></i> Browse Words for this Dialect
-          </button>
+            <!-- Associated Regional Vocabulary Section -->
+            <div class="pt-3 border-t border-slate-100">
+              <div class="flex items-center justify-between mb-2.5">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <i class="fa-solid fa-language text-emerald-700"></i> Associated Regional Words
+                  <span id="map-words-count" class="bg-emerald-50 text-emerald-800 text-[11px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-100">0</span>
+                </h3>
+                <span class="text-[11px] text-slate-400">Click word for details</span>
+              </div>
+
+              <!-- Scrollable Words List for Selected Dialect -->
+              <div id="map-dialect-words-container" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                <!-- Dynamically loaded word items -->
+                <div class="text-center py-6 text-slate-400 text-xs">
+                  <i class="fa-solid fa-spinner fa-spin text-base mb-1 block"></i>
+                  Loading dialect vocabulary...
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-100">
+              <button id="map-explore-btn" onclick="filterBySelectedMapDialect()" class="btn-primary w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-sm">
+                <i class="fa-solid fa-book-open"></i> Browse All in Dictionary
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -765,7 +798,7 @@
         </div>
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
           <div class="text-xs font-bold text-slate-400 uppercase">Active Contributors</div>
-          <div id="admin-contributors-count" class="text-3xl font-extrabold text-slate-900 mt-1">6</div>
+          <div id="admin-contributors-count" class="text-3xl font-extrabold text-slate-900 mt-1">3</div>
         </div>
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
           <div class="text-xs font-bold text-amber-500 uppercase">Pending Approvals</div>

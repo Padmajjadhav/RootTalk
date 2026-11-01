@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.database import get_db
 from app.models import Dialect, LexiconEntry, AudioArchive, User, UserRole
-from app.schemas.schemas import DialectCreate, DialectResponse, DialectUpdate
+from app.schemas.schemas import DialectCreate, DialectResponse, DialectUpdate, LexiconResponse
 from app.services.auth_service import get_current_user, get_optional_user
 
 router = APIRouter(prefix="/dialects", tags=["Dialects & Regional Languages"])
@@ -123,6 +123,8 @@ def get_dialect_map_data(dialect_id: int, db: Session = Depends(get_db)):
     if not dialect:
         raise HTTPException(status_code=404, detail="Dialect not found")
 
+    words = db.query(LexiconEntry).filter(LexiconEntry.dialect_id == dialect_id).all()
+
     return {
         "id": dialect.id,
         "name": dialect.name,
@@ -136,5 +138,30 @@ def get_dialect_map_data(dialect_id: int, db: Session = Depends(get_db)):
             "longitude": dialect.longitude
         },
         "endangerment_status": dialect.endangerment_status,
-        "estimated_speakers": dialect.estimated_speakers
+        "estimated_speakers": dialect.estimated_speakers,
+        "words_count": len(words),
+        "sample_words": [
+            {
+                "id": w.id,
+                "term": w.term or w.word,
+                "transliteration": w.transliteration or w.script,
+                "meaning": w.meaning,
+                "category": w.category
+            }
+            for w in words[:5]
+        ]
     }
+
+@router.get("/{dialect_id}/words", response_model=List[LexiconResponse])
+def get_dialect_words(
+    dialect_id: int,
+    limit: Optional[int] = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db)
+):
+    """Retrieve vocabulary entries associated strictly with the specified dialect ID."""
+    dialect = db.query(Dialect).filter(Dialect.id == dialect_id).first()
+    if not dialect:
+        raise HTTPException(status_code=404, detail="Dialect not found")
+
+    words = db.query(LexiconEntry).filter(LexiconEntry.dialect_id == dialect_id).limit(limit).all()
+    return words

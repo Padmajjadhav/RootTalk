@@ -453,6 +453,26 @@ def seed_database(db: Session):
                 entries_count += 1
     db.commit()
 
+    # Normalize legacy category variations and transliterations for canonical consistency
+    cat_norm = {
+        "Daily Greetings": "Daily Life",
+        "Family & Society": "Family",
+        "Folklore & Tourism": "Traditional Culture"
+    }
+    for old_c, new_c in cat_norm.items():
+        db.query(Entry).filter(Entry.category == old_c).update({Entry.category: new_c}, synchronize_session=False)
+
+    trans_updates = {
+        "ख़य चाललोस?": "Khay challos?",
+        "चेडू": "Chedu",
+        "येवा कोंकण आपलोच असा!": "Yeva Konkan aploch asa!",
+        "कसं काय भाऊ?": "Kasa kay bhau?",
+        "कशास तुले?": "Kashas tule?"
+    }
+    for w, tr in trans_updates.items():
+        db.query(Entry).filter(Entry.word == w, Entry.transliteration == "Devanagari").update({Entry.transliteration: tr}, synchronize_session=False)
+    db.commit()
+
     # 6. Seed Fieldwork Audio Recordings
     for dist, tal, vil, lat, lon, spk, url, title, genre in AUDIO_STORIES_DATA:
         if not db.query(AudioArchive).filter(AudioArchive.title == title).first():

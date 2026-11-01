@@ -505,6 +505,7 @@ async function fetchLexiconEntries(page = 1) {
 
     if (currentCategory && currentCategory !== "All") {
       params.append("category", currentCategory);
+      params.append("semantic_category", currentCategory);
     }
 
     const posSelect = document.getElementById("pos-filter");
@@ -690,12 +691,17 @@ async function executePhoneticSearch() {
   if (counter) counter.innerText = `Phonetic search for "${query}"...`;
 
   try {
+    const dialectSelect = document.getElementById("dialect-filter");
+    const dialectId = (dialectSelect && dialectSelect.value !== "All") ? parseInt(dialectSelect.value) : null;
+    const cat = (currentCategory && currentCategory !== "All") ? currentCategory : null;
+
     const res = await fetch(`${API_BASE}/lexicon/phonetic-search`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         query_term: query,
-        dialect_id: null,
+        dialect_id: dialectId,
+        category: cat,
         max_distance: 3
       })
     });
@@ -704,6 +710,7 @@ async function executePhoneticSearch() {
       const results = await res.json();
       totalEntriesCount = results.length;
       totalPages = 1;
+      currentPage = 1;
       renderLexiconGrid(results);
       renderPagination();
       if (counter) counter.innerText = `Found ${results.length} phonetic match(es) for "${query}"`;
@@ -718,11 +725,18 @@ async function executePhoneticSearch() {
 
 function selectCategory(cat) {
   currentCategory = cat;
+  currentPage = 1;
   document.querySelectorAll("#category-pills-container .filter-tag").forEach(tag => tag.classList.remove("active"));
   const safeId = `cat-${cat.replace(/\s+/g, '-')}`;
   const btn = document.getElementById(safeId);
   if (btn) btn.classList.add("active");
-  fetchLexiconEntries(1);
+
+  const searchInput = document.getElementById("dict-search-input");
+  if (isPhoneticActive && searchInput && searchInput.value.trim()) {
+    executePhoneticSearch();
+  } else {
+    fetchLexiconEntries(1);
+  }
 }
 
 function quickFilterTag(cat) {
@@ -731,7 +745,12 @@ function quickFilterTag(cat) {
 }
 
 function filterLexiconEntries() {
-  fetchLexiconEntries(1);
+  const searchInput = document.getElementById("dict-search-input");
+  if (isPhoneticActive && searchInput && searchInput.value.trim()) {
+    executePhoneticSearch();
+  } else {
+    fetchLexiconEntries(1);
+  }
 }
 
 function handleHeroSearch(event) {

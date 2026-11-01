@@ -12,7 +12,8 @@ from app.schemas.schemas import (
 from app.services.auth_service import get_current_user, get_optional_user
 from app.services.phonetic import (
     devanagari_to_ipa, generate_indic_soundex,
-    levenshtein_distance, devanagari_to_transliteration
+    levenshtein_distance, devanagari_to_transliteration,
+    normalize_marathi_text
 )
 from app.services.websocket_manager import ws_manager
 from app.services.rate_limiter import rate_limiter
@@ -23,7 +24,8 @@ router = APIRouter(prefix="/lexicon", tags=["Lexicon & Dictionary Preserver"])
 def list_lexicon_entries(
     response: Response,
     dialect_id: Optional[int] = Query(None, description="Filter by dialect ID"),
-    semantic_category: Optional[str] = Query(None, description="Filter by category (e.g. Agriculture, Food)"),
+    category: Optional[str] = Query(None, description="Filter by category (e.g. Agriculture, Food)"),
+    semantic_category: Optional[str] = Query(None, description="Filter by category alias"),
     part_of_speech: Optional[str] = Query(None, description="Filter by Part of Speech"),
     search: Optional[str] = Query(None, description="Search term, transliteration, or translation"),
     verification_status: Optional[str] = Query(None, description="Pending, Verified, Rejected"),
@@ -36,12 +38,13 @@ def list_lexicon_entries(
 
     if dialect_id:
         query = query.filter(LexiconEntry.dialect_id == dialect_id)
-    if semantic_category:
-        query = query.filter(LexiconEntry.category.ilike(f"%{semantic_category}%"))
-    if part_of_speech:
-        query = query.filter(LexiconEntry.part_of_speech.ilike(f"%{part_of_speech}%"))
-    if verification_status:
-        query = query.filter(LexiconEntry.verification_status.ilike(f"%{verification_status}%"))
+    cat_filter = category or semantic_category
+    if cat_filter and cat_filter.strip().lower() != "all":
+        query = query.filter(LexiconEntry.category.ilike(f"%{cat_filter.strip()}%"))
+    if part_of_speech and part_of_speech.strip().lower() != "all":
+        query = query.filter(LexiconEntry.part_of_speech.ilike(f"%{part_of_speech.strip()}%"))
+    if verification_status and verification_status.strip().lower() != "all":
+        query = query.filter(LexiconEntry.verification_status.ilike(f"%{verification_status.strip()}%"))
 
     if search:
         search_filter = (
@@ -160,21 +163,88 @@ def phonetic_lexicon_search(
     req: PhoneticSearchRequest,
     db: Session = Depends(get_db)
 ):
-    query_soundex = generate_indic_soundex(req.query_term)
-    all_entries = db.query(LexiconEntry).all()
+    q_clean = req.query_term.strip() if req.query_term else ""
+    if not q_clean:
+        return []
+
+    query = db.query(LexiconEntry)
+    if req.dialect_id:
+        query = query.filter(LexiconEntry.dialect_id == req.dialect_id)
+    cat = req.category or req.semantic_category
+    if cat and cat.strip().lower() != "all":
+        query = query.filter(LexiconEntry.category.ilike(f"%{cat.strip()}%"))
+
+    all_entries = query.all()
+
+    q_lower = q_clean.lower()
+    q_norm = normalize_marathi_text(q_clean)
+    q_trans = devanagari_to_transliteration(q_clean).lower()
+    q_soundex = generate_indic_soundex(q_clean)
+    is_dev = any('\u0900' <= c <= '\u097f' for c in q_clean)
+
     results = []
-
     for entry in all_entries:
-        dist = levenshtein_distance(req.query_term, entry.term)
-        soundex_match = (entry.phonetic_code == query_soundex)
-        text_match = (req.query_term.lower() in entry.term.lower()) or (req.query_term.lower() in entry.meaning.lower())
+        e_term = (entry.term or entry.word or "").strip()
+        e_norm = normalize_marathi_text(e_term)
+        e_trans = (entry.transliteration or "").strip().lower()
+        e_term_trans = devanagari_to_transliteration(e_term).lower()
+        e_meaning = (entry.meaning or "").lower()
+        e_std = (entry.meaning_standard_lang or "").lower()
+        e_soundex = entry.phonetic_code or generate_indic_soundex(e_term)
 
-        if dist <= req.max_distance or soundex_match or text_match:
-            rank = 0 if soundex_match else dist
-            results.append((rank, entry))
+        e_tokens = set([t.strip('?!.,:;"\'') for t in (e_term_trans + " " + e_trans).split() if t])
+        e_dev_tokens = set([t.strip('?!.,:;"\'') for t in e_norm.split() if t])
 
-    results.sort(key=lambda x: x[0])
-    return [item[1] for item in results[:50]]
+        rank = None
+        best_dist = 99
+
+        # 1. Exact match (Rank 0)
+        if q_norm == e_norm or q_lower == e_trans or q_trans == e_term_trans or q_lower == e_term_trans:
+            rank = 0
+            best_dist = 0
+        # 2. Token exact match (Rank 1)
+        elif (is_dev and q_norm in e_dev_tokens) or (q_lower in e_tokens) or (q_trans in e_tokens):
+            rank = 1
+            best_dist = 0
+        # 3. Prefix match (Rank 2)
+        elif e_trans.startswith(q_lower) or e_term_trans.startswith(q_trans) or (is_dev and e_norm.startswith(q_norm)):
+            rank = 2
+            best_dist = 1
+        # 4. Substring match (Rank 3)
+        elif (q_lower in e_trans) or (q_trans in e_term_trans) or (is_dev and q_norm in e_norm):
+            rank = 3
+            best_dist = 1
+        else:
+            # 5. Fuzzy match on transliteration or Devanagari
+            dist_trans = min(
+                levenshtein_distance(q_trans, e_term_trans),
+                levenshtein_distance(q_trans, e_trans) if e_trans else 99
+            )
+            token_dists = [levenshtein_distance(q_trans, tok) for tok in e_tokens if tok]
+            if token_dists:
+                dist_trans = min(dist_trans, min(token_dists))
+
+            if is_dev:
+                dist_dev = min([levenshtein_distance(q_norm, tok) for tok in e_dev_tokens if tok] + [levenshtein_distance(q_norm, e_norm)])
+                best_dist = min(dist_trans, dist_dev)
+            else:
+                best_dist = dist_trans
+
+            soundex_match = bool(q_soundex and e_soundex and q_soundex == e_soundex)
+
+            if soundex_match and best_dist <= (req.max_distance + 1):
+                rank = 4 + min(best_dist, 3)
+            elif best_dist <= req.max_distance:
+                rank = 5 + best_dist
+            elif q_lower in e_meaning or q_lower in e_std:
+                rank = 12
+                best_dist = 10
+
+        if rank is not None:
+            results.append((rank, best_dist, entry))
+
+    results.sort(key=lambda x: (x[0], x[1], x[2].id))
+    return [item[2] for item in results[:50]]
 
 @router.post("/{entry_id}/vote")
 def vote_lexicon_entry(

@@ -205,6 +205,8 @@ class EntryCreate(BaseModel):
 class PhoneticSearchRequest(BaseModel):
     query_term: str
     dialect_id: Optional[int] = None
+    category: Optional[str] = None
+    semantic_category: Optional[str] = None
     max_distance: int = 3
 
 # --- AUDIO / VOICE RECORDING SCHEMAS ---
